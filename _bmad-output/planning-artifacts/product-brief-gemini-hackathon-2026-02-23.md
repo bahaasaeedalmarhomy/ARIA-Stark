@@ -188,14 +188,6 @@ Explicitly deferred — not cut because they're unimportant, but because 21 days
 | **Mobile UI control** | Adds scope without adding demo impact |
 | **Custom autonomy dial** | Post-MVP UX refinement |
 
-### 3-Week Build Plan
-
-| Week | Focus | Deliverables |
-|---|---|---|
-| **Week 1** (Feb 23 – Mar 2) | Core agent pipeline | ADK scaffold, Planner + Executor agents working locally, SSE stream to frontend, thinking panel MVP, destructive action guard |
-| **Week 2** (Mar 3 – Mar 10) | Voice + cloud | Gemini Live API voice pipeline, barge-in support, Cloud Run deployment with Playwright, Firestore audit log, confidence overlays on thinking panel |
-| **Week 3** (Mar 11 – Mar 17) | Demo + polish | Demo scenario rehearsed and locked, error handling for known failure modes, architecture diagram, 4-minute video recorded and submitted |
-
 ### Future Vision (Post-Hackathon)
 
 If ARIA wins or achieves strong recognition, the natural expansion path:
