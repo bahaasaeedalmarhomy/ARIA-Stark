@@ -1,0 +1,18 @@
+[project]
+name = "aria-backend"
+version = "1.0.0"
+description = "ARIA Backend - AI Browser Automation Agent"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+addopts = "-v"
