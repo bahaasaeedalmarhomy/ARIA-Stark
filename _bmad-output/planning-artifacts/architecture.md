@@ -62,7 +62,7 @@ ARIA has 13 distinct functional requirement areas derived from 5 user journeys:
 
 - **Deadline:** March 17, 2026 (hackathon submission)
 - **Runtime:** Must deploy on Google Cloud Run — Vertex AI Agent Engine excluded (no headless browser support)
-- **Models:** Planner = `gemini-3-1-pro`; Executor = `gemini-3-flash` (built-in computer use — Gemini 3 Pro/Flash models have native computer use support, no separate computer use model needed); Voice = `gemini-live-2.5-flash-native-audio`
+- **Models:** Planner = `gemini-3-1-pro`; Executor + Voice = `gemini-3-flash` (fully multimodal — built-in computer use, native audio in/out; single model handles both browser execution and voice interaction)
 - **Model update note:** `gemini-2.5-computer-use-preview-10-2025` is superseded — per Google AI docs (Feb 2026): *"Gemini 3 Pro and Flash models support integrated computer use, without the need for a separate model."* `gemini-3-flash` is preferred for the Executor role: faster action-verify loop, lower latency per step, and cost-efficient at high screenshot volume.
 - **Framework:** Google ADK v1.25+ — native ComputerUseToolset, built-in OpenTelemetry, one-command Cloud Run deploy
 - **Container:** Official `mcr.microsoft.com/playwright` Docker image; 2–4 GB RAM; `--no-sandbox`, `--disable-dev-shm-usage`
