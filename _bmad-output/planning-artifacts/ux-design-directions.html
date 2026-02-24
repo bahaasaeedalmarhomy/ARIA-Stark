@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — UX Design Directions</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-base: #09090B;
+    --bg-surface: #18181B;
+    --bg-raised: #27272A;
+    --bg-muted: #3F3F46;
+    --border: #52525B;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --text-disabled: #52525B;
+    --signal-active: #3B82F6;
+    --signal-success: #10B981;
+    --signal-warning: #F59E0B;
+    --signal-danger: #F43F5E;
+    --signal-pause: #A78BFA;
+  }
+  body { background: #000; font-family: 'Inter', system-ui, sans-serif; color: var(--text-primary); }
+
+  /* NAV */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(9,9,11,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; height: 52px; display: flex; align-items: center; gap: 8px; overflow-x: auto; }
+  .nav-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-right: 16px; white-space: nowrap; }
+  .nav-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .nav-btn:hover { background: var(--bg-raised); color: var(--text-primary); }
+  .nav-btn.active { background: var(--signal-active); border-color: var(--signal-active); color: #fff; }
+
+  /* SECTIONS */
+  .section { display: none; padding-top: 52px; min-height: 100vh; }
+  .section.active { display: block; }
+  .section-header { padding: 32px 32px 0; border-bottom: 1px solid var(--border); }
+  .section-header h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .section-header p { font-size: 13px; color: var(--text-secondary); padding-bottom: 20px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px; vertical-align: middle; }
+  .tag-concept { background: rgba(59,130,246,0.15); color: var(--signal-active); border: 1px solid rgba(59,130,246,0.3); }
+  .tag-bold { background: rgba(167,139,250,0.15); color: var(--signal-pause); border: 1px solid rgba(167,139,250,0.3); }
+
+  /* ─── DIRECTION 1: Command Center ─── */
+  .d1 { background: var(--bg-base); }
+  .d1-layout { display: grid; grid-template-columns: 1fr 400px; grid-template-rows: 1fr 64px; height: calc(100vh - 52px - 89px); margin: 0; }
+  .d1-browser { background: #0D0D10; border-right: 1px solid var(--border); position: relative; overflow: hidden; }
+  .d1-browser-bar { height: 40px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+  .d1-browser-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .d1-browser-url { flex: 1; height: 24px; background: var(--bg-raised); border-radius: 4px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; color: var(--text-secondary); font-family: monospace; }
+  .d1-browser-content { padding: 24px; }
+  .d1-executing-overlay { position: absolute; top: 40px; left: 0; right: 0; bottom: 0; pointer-events: none; }
+  .d1-highlight-box { position: absolute; border: 2px solid var(--signal-active); border-radius: 4px; background: rgba(59,130,246,0.08); animation: pulse-border 2s infinite; }
+  @keyframes pulse-border { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .d1-cursor { position: absolute; width: 20px; height: 20px; background: var(--signal-active); border-radius: 50%; opacity: 0.8; animation: cursor-move 3s ease-in-out infinite; box-shadow: 0 0 12px var(--signal-active); }
+  @keyframes cursor-move { 0% { transform: translate(80px, 60px); } 50% { transform: translate(180px, 120px); } 100% { transform: translate(80px, 60px); } }
+
+  .d1-panel { background: var(--bg-surface); display: flex; flex-direction: column; }
+  .d1-panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .d1-panel-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+  .d1-voice-state { display: flex; align-items: center; gap: 6px; }
+  .d1-voice-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal-active); animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  .d1-voice-label { font-size: 11px; color: var(--signal-active); }
+  .d1-steps { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .d1-step { padding: 10px 12px; border-radius: 6px; border: 1px solid transparent; display: flex; gap: 10px; align-items: flex-start; }
+  .d1-step.done { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2); }
+  .d1-step.active { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.35); }
+  .d1-step.pending { background: var(--bg-raised); border-color: var(--border); opacity: 0.5; }
+  .d1-step-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .d1-step.done .d1-step-num { background: var(--signal-success); color: #fff; }
+  .d1-step.active .d1-step-num { background: var(--signal-active); color: #fff; animation: pulse-bg 1.5s infinite; }
+  @keyframes pulse-bg { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
+  .d1-step.pending .d1-step-num { background: var(--bg-muted); color: var(--text-disabled); }
+  .d1-step-body { flex: 1; min-width: 0; }
+  .d1-step-action { font-size: 12px; font-family: monospace; color: var(--text-primary); line-height: 1.4; }
+  .d1-step.pending .d1-step-action { color: var(--text-disabled); }
+  .d1-step-meta { font-size: 11px; color: var(--text-secondary); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+  .d1-conf { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+  .conf-h { background: rgba(16,185,129,0.15); color: var(--signal-success); }
+  .conf-m { background: rgba(245,158,11,0.15); color: var(--signal-warning); }
+  .conf-l { background: rgba(244,63,94,0.15); color: var(--signal-danger); }
+  .d1-waveform { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .d1-wave-bars { display: flex; align-items: center; gap: 2px; height: 24px; }
+  .d1-bar { width: 3px; border-radius: 2px; background: var(--signal-active); animation: wave-bar 1s ease-in-out infinite; }
+  .d1-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+  .d1-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+  .d1-bar:nth-child(3) { height: 20px; animation-delay: 0.2s; }
+  .d1-bar:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+  .d1-bar:nth-child(5) { height: 18px; animation-delay: 0.4s; }
+  .d1-bar:nth-child(6) { height: 8px; animation-delay: 0.5s; }
+  @keyframes wave-bar { 0%,100% { opacity:0.4; transform: scaleY(0.6); } 50% { opacity:1; transform: scaleY(1); } }
+  .d1-wave-text { font-size: 12px; color: var(--signal-active); }
+  .d1-taskbar { grid-column: 1 / -1; background: var(--bg-surface); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+  .d1-task-input { flex: 1; height: 38px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 8px; padding: 0 14px; color: var(--text-primary); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .d1-task-placeholder { color: var(--text-disabled); font-size: 13px; }
+  .d1-mic-btn { width: 38px; height: 38px; border-radius: 8px; background: var(--signal-active); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .d1-mic-btn svg { width: 16px; height: 16px; fill: #fff; }
+  .d1-stop-btn { padding: 0 14px; height: 38px; border-radius: 8px; background: rgba(244,63,94,0.15); border: 1px solid rgba(244,63,94,0.3); color: var(--signal-danger); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+  /* Faux browser content */
+  .faux-page { padding: 20px; }
+  .faux-form-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .faux-form-input { width: 100%; height: 32px; background: #1a1a1e; border: 1px solid #333; border-radius: 4px; margin-bottom: 14px; padding: 0 10px; font-size: 12px; color: #888; display: flex; align-items: center; }
+  .faux-form-input.filled { border-color: rgba(59,130,246,0.4); color: var(--text-primary); }
+  .faux-btn { display: inline-block; padding: 8px 20px; background: #2563eb; border-radius: 5px; font-size: 13px; color: #fff; cursor: pointer; }
+
+  /* ─── DIRECTION 2: Split Focus ─── */
+  .d2 { background: var(--bg-base); }
+  .d2-layout { display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 1fr 64px; height: calc(100vh - 52px - 89px); }
+  .d2-panel { background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .d2-panel-top { padding: 16px; border-bottom: 1px solid var(--border); }
+  .d2-panel-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+  .d2-panel-sub { font-size: 11px; color: var(--text-secondary); }
+  .d2-progress { height: 2px; background: var(--bg-muted); border-radius: 1px; margin-top: 12px; overflow: hidden; }
+  .d2-progress-fill { height: 100%; width: 40%; background: linear-gradient(90deg, var(--signal-active), var(--signal-success)); border-radius: 1px; }
+  .d2-steps { flex: 1; overflow-y: auto; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .d2-step { padding: 8px 10px; border-radius: 5px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .d2-step:hover { background: var(--bg-raised); }
+  .d2-step.done { opacity: 0.7; }
+  .d2-step.active { background: rgba(59,130,246,0.12); }
+  .d2-step-icon { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+  .d2-step.done .d2-step-icon { background: var(--signal-success); color: #fff; }
+  .d2-step.active .d2-step-icon { background: var(--signal-active); color: #fff; }
+  .d2-step.pending .d2-step-icon { background: var(--bg-muted); }
+  .d2-step-text { font-size: 12px; color: var(--text-secondary); flex: 1; }
+  .d2-step.active .d2-step-text { color: var(--text-primary); font-weight: 500; }
+  .d2-narration { padding: 12px 14px; border-top: 1px solid var(--border); background: rgba(59,130,246,0.04); }
+  .d2-narration-label { font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .d2-narration-text { font-size: 12px; color: var(--text-primary); line-height: 1.5; font-style: italic; }
+  .d2-browser { background: #0D0D10; position: relative; overflow: hidden; }
+  .d2-taskbar { grid-column: 1 / -1; background: var(--bg-raised); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; }
+  .d2-voice-pill { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 40px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; }
+  .d2-voice-ring { width: 8px; height: 8px; border-radius: 50%; background: var(--signal-active); animation: blink 1.2s infinite; }
+  .d2-voice-text { font-size: 12px; color: var(--signal-active); }
+  .d2-input { flex: 1; height: 40px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0 14px; display: flex; align-items: center; }
+  .d2-input-placeholder { font-size: 13px; color: var(--text-disabled); }
+
+  /* ─── DIRECTION 3: Immersive Full ─── */
+  .d3 { background: var(--bg-base); }
+  .d3-layout { height: calc(100vh - 52px - 89px); position: relative; overflow: hidden; }
+  .d3-browser-bg { position: absolute; inset: 0; background: #0D0D10; }
+  .d3-overlay { position: absolute; inset: 0; pointer-events: none; }
+  .d3-left-panel { position: absolute; top: 0; left: 0; bottom: 64px; width: 360px; background: rgba(24,24,27,0.92); backdrop-filter: blur(16px); border-right: 1px solid rgba(82,82,91,0.5); display: flex; flex-direction: column; pointer-events: all; }
+  .d3-panel-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(82,82,91,0.4); }
+  .d3-logo { font-size: 16px; font-weight: 800; background: linear-gradient(135deg, var(--signal-active), var(--signal-pause)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .d3-status-chip { padding: 4px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); font-size: 11px; color: var(--signal-active); display: flex; align-items: center; gap: 5px; }
+  .d3-steps { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .d3-step { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(39,39,42,0.6); }
+  .d3-step.active { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.08); box-shadow: 0 0 20px rgba(59,130,246,0.1); }
+  .d3-step.done { border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.04); }
+  .d3-step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .d3-step-num { font-size: 10px; font-weight: 700; color: var(--text-disabled); }
+  .d3-step-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .d3-step.done .d3-step-status { background: rgba(16,185,129,0.15); color: var(--signal-success); }
+  .d3-step.active .d3-step-status { background: rgba(59,130,246,0.2); color: var(--signal-active); }
+  .d3-step.pending .d3-step-status { background: var(--bg-muted); color: var(--text-disabled); }
+  .d3-step-action { font-size: 12px; font-family: monospace; color: var(--text-secondary); line-height: 1.4; }
+  .d3-step.active .d3-step-action { color: var(--text-primary); }
+  .d3-screenshot { width: 100%; border-radius: 4px; height: 70px; background: var(--bg-muted); margin-top: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-disabled); }
+  .d3-bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 64px; background: rgba(24,24,27,0.95); backdrop-filter: blur(16px); border-top: 1px solid rgba(82,82,91,0.5); display: flex; align-items: center; padding: 0 20px; gap: 12px; pointer-events: all; }
+  .d3-input { flex: 1; height: 40px; background: rgba(39,39,42,0.8); border: 1px solid var(--border); border-radius: 10px; padding: 0 16px; display: flex; align-items: center; gap: 8px; }
+  .d3-input-text { font-size: 13px; color: var(--text-disabled); flex: 1; }
+  .d3-voice-indicator { width: 40px; height: 40px; border-radius: 50%; background: var(--signal-active); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(59,130,246,0.4); animation: glow-pulse 2s infinite; }
+  @keyframes glow-pulse { 0%,100% { box-shadow: 0 0 10px rgba(59,130,246,0.3); } 50% { box-shadow: 0 0 30px rgba(59,130,246,0.6); } }
+  .d3-stop { padding: 0 16px; height: 40px; border-radius: 10px; background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); color: var(--signal-danger); font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  /* DIRECTION 4: Minimal Terminal */
+  .d4 { background: #080810; }
+  .d4-layout { display: grid; grid-template-columns: 1fr 380px; height: calc(100vh - 52px - 89px); }
+  .d4-browser { background: #0A0A12; border-right: 1px solid #1a1a2e; }
+  .d4-browser-chrome { height: 36px; background: #0E0E1A; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+  .d4-url { flex: 1; height: 22px; background: #141420; border-radius: 3px; display: flex; align-items: center; padding: 0 8px; font-family: monospace; font-size: 10px; color: #4a4a6a; }
+  .d4-panel { background: #0A0A12; display: flex; flex-direction: column; }
+  .d4-terminal-header { padding: 10px 14px; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; gap: 8px; }
+  .d4-terminal-title { font-family: monospace; font-size: 11px; color: #4a4a6a; }
+  .d4-terminal-status { font-family: monospace; font-size: 11px; color: #3b82f6; }
+  .d4-log { flex: 1; overflow-y: auto; padding: 12px 14px; font-family: monospace; font-size: 11px; line-height: 2; display: flex; flex-direction: column; gap: 0; }
+  .d4-log-line { display: flex; gap: 10px; }
+  .d4-log-ts { color: #3a3a5a; flex-shrink: 0; }
+  .d4-log-tag { flex-shrink: 0; }
+  .d4-log-tag.done { color: var(--signal-success); }
+  .d4-log-tag.running { color: var(--signal-active); animation: blink 1s infinite; }
+  .d4-log-tag.pending { color: #3a3a5a; }
+  .d4-log-tag.warn { color: var(--signal-warning); }
+  .d4-log-msg { color: #6a6a9a; }
+  .d4-log-line.active .d4-log-msg { color: var(--text-primary); }
+  .d4-voice-section { padding: 10px 14px; border-top: 1px solid #1a1a2e; display: flex; gap: 8px; align-items: center; }
+  .d4-wave { display: flex; gap: 2px; align-items: center; }
+  .d4-wave span { width: 2px; background: var(--signal-active); border-radius: 1px; animation: wave-bar 1s ease-in-out infinite; }
+  .d4-wave span:nth-child(1) { height: 6px; animation-delay: 0s; }
+  .d4-wave span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+  .d4-wave span:nth-child(3) { height: 16px; animation-delay: 0.2s; }
+  .d4-wave span:nth-child(4) { height: 10px; animation-delay: 0.3s; }
+  .d4-wave span:nth-child(5) { height: 14px; animation-delay: 0.4s; }
+  .d4-voice-label { font-family: monospace; font-size: 10px; color: var(--signal-active); }
+  .d4-taskbar-wrap { grid-column: 1/-1; border-top: 1px solid #1a1a2e; }
+  .d4-taskbar { height: 52px; background: #0A0A12; display: flex; align-items: center; padding: 0 14px; gap: 10px; }
+  .d4-prompt { font-family: monospace; font-size: 13px; color: #3b82f6; }
+  .d4-task-field { flex: 1; font-family: monospace; font-size: 12px; color: var(--text-secondary); }
+  .d4-cursor-blink { display: inline-block; width: 8px; height: 14px; background: var(--signal-active); animation: cursor-blink 1s step-end infinite; vertical-align: text-bottom; }
+  @keyframes cursor-blink { 50% { opacity: 0; } }
+
+  /* DIRECTION 5: Card-First */
+  .d5 { background: var(--bg-base); }
+  .d5-layout { display: flex; flex-direction: column; height: calc(100vh - 52px - 89px); overflow: hidden; }
+  .d5-top { display: grid; grid-template-columns: 1fr 420px; flex: 1; overflow: hidden; }
+  .d5-browser { background: #0D0D10; overflow: hidden; position: relative; }
+  .d5-right { background: var(--bg-surface); display: flex; flex-direction: column; border-left: 1px solid var(--border); overflow: hidden; }
+  .d5-task-card { margin: 12px; padding: 12px 14px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; }
+  .d5-task-label { font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .d5-task-text { font-size: 13px; color: var(--text-primary); line-height: 1.4; }
+  .d5-steps-header { padding: 8px 12px; font-size: 11px; color: var(--text-secondary); font-weight: 600; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .d5-count { font-size: 10px; color: var(--text-disabled); }
+  .d5-steps { flex: 1; overflow-y: auto; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .d5-step-card { border-radius: 8px; border: 1px solid var(--border); background: var(--bg-raised); overflow: hidden; }
+  .d5-step-card.active { border-color: rgba(59,130,246,0.4); }
+  .d5-step-card.done { border-color: rgba(16,185,129,0.2); opacity: 0.75; }
+  .d5-step-card-header { padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+  .d5-step-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .d5-step-card.done .d5-step-dot { background: var(--signal-success); }
+  .d5-step-card.active .d5-step-dot { background: var(--signal-active); animation: pulse-bg 1.5s infinite; }
+  .d5-step-card.pending .d5-step-dot { background: var(--bg-muted); }
+  .d5-step-card-title { font-size: 12px; color: var(--text-primary); flex: 1; }
+  .d5-step-card.pending .d5-step-card-title { color: var(--text-disabled); }
+  .d5-step-card-badge { padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+  .d5-step-screenshot { height: 60px; background: #111114; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-disabled); }
+  .d5-voice-bar { height: 52px; background: var(--bg-raised); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 12px; }
+  .d5-wave-container { display: flex; align-items: center; gap: 2px; }
+  .d5-wave-container .d1-bar { background: var(--signal-active); }
+  .d5-voice-text { font-size: 12px; color: var(--signal-active); flex: 1; font-style: italic; }
+  .d5-bottom { height: 64px; background: var(--bg-surface); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; }
+  .d5-task-input { flex: 1; height: 40px; background: var(--bg-base); border: 1px solid var(--border); border-radius: 10px; padding: 0 16px; display: flex; align-items: center; gap: 8px; }
+  .d5-task-input-text { font-size: 13px; color: var(--text-disabled); flex: 1; }
+  .d5-mic { width: 40px; height: 40px; border-radius: 50%; background: var(--signal-active); display: flex; align-items: center; justify-content: center; }
+
+  /* DIRECTION 6: Focus Mode */
+  .d6 { background: var(--bg-base); }
+  .d6-layout { height: calc(100vh - 52px - 89px); display: flex; flex-direction: column; }
+  .d6-header { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+  .d6-logo { font-size: 15px; font-weight: 800; background: linear-gradient(135deg, var(--signal-active), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .d6-task-breadcrumb { flex: 1; font-size: 13px; color: var(--text-secondary); padding: 0 16px; }
+  .d6-task-breadcrumb span { color: var(--text-primary); }
+  .d6-step-indicator { font-size: 12px; color: var(--text-secondary); }
+  .d6-step-indicator strong { color: var(--signal-active); }
+  .d6-voice-chip { display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); border-radius: 20px; }
+  .d6-voice-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal-active); animation: blink 1.2s infinite; }
+  .d6-voice-chip-text { font-size: 11px; color: var(--signal-active); }
+  .d6-main { display: grid; grid-template-columns: 1fr 360px; flex: 1; overflow: hidden; }
+  .d6-browser { background: #0D0D10; overflow: hidden; }
+  .d6-sidebar { background: var(--bg-surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .d6-sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .d6-tab { flex: 1; padding: 8px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text-disabled); cursor: pointer; border-bottom: 2px solid transparent; }
+  .d6-tab.active { color: var(--signal-active); border-bottom-color: var(--signal-active); }
+  .d6-steps { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .d6-step-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; }
+  .d6-step-row:hover { background: var(--bg-raised); }
+  .d6-step-row.active { background: rgba(59,130,246,0.08); }
+  .d6-connector { width: 1px; height: 12px; background: var(--border); margin-left: 7px; }
+  .d6-step-circle { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; }
+  .d6-step-row.done .d6-step-circle { background: var(--signal-success); }
+  .d6-step-row.active .d6-step-circle { background: var(--signal-active); }
+  .d6-step-row.pending .d6-step-circle { background: var(--bg-muted); }
+  .d6-step-info { flex: 1; }
+  .d6-step-name { font-size: 12px; color: var(--text-secondary); }
+  .d6-step-row.active .d6-step-name { color: var(--text-primary); font-weight: 500; }
+  .d6-step-sub { font-size: 10px; color: var(--text-disabled); margin-top: 1px; }
+  .d6-narration-box { padding: 12px 14px; border-top: 1px solid var(--border); }
+  .d6-narration-label { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .d6-narration-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; font-style: italic; }
+  .d6-bottom { height: 64px; border-top: 1px solid var(--border); background: var(--bg-surface); display: flex; align-items: center; padding: 0 20px; gap: 12px; }
+  .d6-confirm-banner { display: none; }
+
+  /* DIRECTION 6 barge-in overlay */
+  .d6-barge-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; display: flex; align-items: center; justify-content: center; display: none; }
+  .d6-barge-card { background: var(--bg-surface); border: 1px solid var(--signal-pause); border-radius: 16px; padding: 28px 32px; max-width: 400px; text-align: center; box-shadow: 0 0 60px rgba(167,139,250,0.2); }
+  .d6-barge-icon { width: 56px; height: 56px; border-radius: 50%; background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
+  .d6-barge-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+  .d6-barge-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+  .d6-barge-actions { display: flex; gap: 10px; justify-content: center; }
+  .d6-barge-btn { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid; }
+  .d6-barge-resume { background: var(--signal-active); border-color: var(--signal-active); color: #fff; }
+  .d6-barge-redirect { background: transparent; border-color: var(--signal-pause); color: var(--signal-pause); }
+
+  /* Destructive confirmation mockup */
+  .d-confirm-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+  .d-confirm-modal.show { display: flex; }
+  .d-confirm-card { background: var(--bg-surface); border: 1px solid rgba(244,63,94,0.4); border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 0 40px rgba(244,63,94,0.15); }
+  .d-confirm-icon { width: 48px; height: 48px; border-radius: 50%; background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .d-confirm-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+  .d-confirm-body { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
+  .d-confirm-action { font-size: 12px; color: var(--signal-danger); font-weight: 600; margin-bottom: 20px; font-family: monospace; background: rgba(244,63,94,0.07); padding: 6px 12px; border-radius: 4px; display: inline-block; }
+  .d-confirm-say { font-size: 11px; color: var(--text-disabled); margin-bottom: 16px; }
+  .d-confirm-buttons { display: flex; gap: 10px; justify-content: center; }
+  .d-confirm-yes { padding: 8px 24px; background: var(--signal-danger); border: none; border-radius: 7px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .d-confirm-no { padding: 8px 24px; background: transparent; border: 1px solid var(--border); border-radius: 7px; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+
+  /* EVALUATION PANEL */
+  .eval-panel { background: var(--bg-base); padding: 40px 32px; }
+  .eval-panel h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .eval-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 32px; }
+  .eval-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .eval-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .eval-card:hover { border-color: var(--signal-active); }
+  .eval-badge { display: inline-block; width: 28px; height: 28px; border-radius: 6px; background: var(--signal-active); color: #fff; font-size: 13px; font-weight: 700; text-align: center; line-height: 28px; margin-bottom: 10px; }
+  .eval-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .eval-card p { font-size: 12px; color: var(--text-secondary); margin-bottom: 0; }
+  .eval-pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .eval-pros, .eval-cons { padding: 8px 10px; border-radius: 6px; font-size: 11px; }
+  .eval-pros { background: rgba(16,185,129,0.07); color: var(--signal-success); border: 1px solid rgba(16,185,129,0.2); }
+  .eval-cons { background: rgba(244,63,94,0.05); color: #f87171; border: 1px solid rgba(244,63,94,0.15); }
+  .eval-criteria { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; }
+  .eval-criteria h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  .eval-criteria ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .eval-criteria li { font-size: 13px; color: var(--text-secondary); display: flex; gap: 10px; align-items: flex-start; }
+  .eval-criteria li::before { content: "✅"; flex-shrink: 0; }
+
+  /* Shared utilities */
+  .mic-icon { display: inline-block; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm7 9a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V19H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2h-2v-2.07A7 7 0 0 0 19 10z'/%3E%3C/svg%3E") center/contain no-repeat; }
+  .stop-icon { display: inline-block; width: 12px; height: 12px; background: var(--signal-danger); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <span class="nav-title">ARIA — Design Directions</span>
+  <button class="nav-btn active" onclick="showSection('d1')">① Command Center</button>
+  <button class="nav-btn" onclick="showSection('d2')">② Split Focus</button>
+  <button class="nav-btn" onclick="showSection('d3')">③ Immersive</button>
+  <button class="nav-btn" onclick="showSection('d4')">④ Terminal</button>
+  <button class="nav-btn" onclick="showSection('d5')">⑤ Card-First</button>
+  <button class="nav-btn" onclick="showSection('d6')">⑥ Focus Mode</button>
+  <button class="nav-btn" onclick="showSection('eval')">⑦ Evaluation</button>
+  <button class="nav-btn" onclick="showConfirm()" style="margin-left:auto; border-color: rgba(244,63,94,0.4); color: var(--signal-danger);">🔒 Destructive Guard Demo</button>
+</nav>
+
+<!-- ===== DIRECTION 1: COMMAND CENTER ===== -->
+<div id="d1" class="section d1 active">
+  <div class="section-header">
+    <h2>Direction ① — Command Center <span class="tag tag-concept">Recommended</span></h2>
+    <p>Browser view left, Thinking Panel right (fixed 400px), Task Bar pinned bottom. Maximizes browser real estate. Clean agent-tool aesthetic. High information density without clutter.</p>
+  </div>
+  <div class="d1-layout">
+    <div class="d1-browser">
+      <div class="d1-browser-bar">
+        <div class="d1-browser-dot" style="background:#ef4444"></div>
+        <div class="d1-browser-dot" style="background:#f59e0b"></div>
+        <div class="d1-browser-dot" style="background:#22c55e"></div>
+        <div class="d1-browser-url">https://vendor-portal.example.com/compliance/monthly-form</div>
+      </div>
+      <div class="d1-browser-content">
+        <div class="faux-page">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px;color:#e4e4e7;">Monthly Compliance Submission</div>
+          <div class="faux-form-label">Vendor Name</div>
+          <div class="faux-form-input filled">Acme Supplies Ltd.</div>
+          <div class="faux-form-label">Category Code</div>
+          <div class="faux-form-input filled">CAT-2047-B</div>
+          <div class="faux-form-label">Submission Period</div>
+          <div class="faux-form-input">▾ Select month...</div>
+          <div class="faux-form-label">Attachment</div>
+          <div class="faux-form-input" style="opacity:0.5;">Upload certificate...</div>
+        </div>
+      </div>
+      <div class="d1-executing-overlay">
+        <div class="d1-highlight-box" style="top:96px;left:15px;width:280px;height:32px;"></div>
+        <div class="d1-cursor" style="top:80px;left:60px;"></div>
+      </div>
+    </div>
+
+    <div class="d1-panel">
+      <div class="d1-panel-header">
+        <span class="d1-panel-title">ARIA Thinking</span>
+        <div class="d1-voice-state">
+          <div class="d1-voice-dot"></div>
+          <span class="d1-voice-label">Listening</span>
+        </div>
+      </div>
+      <div class="d1-steps">
+        <div class="d1-step done">
+          <div class="d1-step-num">✓</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">navigate("vendor-portal.example.com/compliance")</div>
+            <div class="d1-step-meta"><span class="d1-conf conf-h">HIGH 94%</span><span>Page loaded</span></div>
+          </div>
+        </div>
+        <div class="d1-step done">
+          <div class="d1-step-num">✓</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">fill("#vendor-name", "Acme Supplies Ltd.")</div>
+            <div class="d1-step-meta"><span class="d1-conf conf-h">HIGH 97%</span><span>Field filled</span></div>
+          </div>
+        </div>
+        <div class="d1-step active">
+          <div class="d1-step-num">3</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">select("#category-code", "CAT-2047-B")</div>
+            <div class="d1-step-meta"><span class="d1-conf conf-m">MED 72%</span><span>Locating dropdown...</span></div>
+          </div>
+        </div>
+        <div class="d1-step pending">
+          <div class="d1-step-num">4</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">fill("#period", "February 2026")</div>
+            <div class="d1-step-meta"><span class="d1-conf conf-h">HIGH 88%</span></div>
+          </div>
+        </div>
+        <div class="d1-step pending">
+          <div class="d1-step-num">5</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">request_input("certificate_path")</div>
+            <div class="d1-step-meta"><span style="font-size:10px;color:var(--signal-warning);">⚠ Needs user input</span></div>
+          </div>
+        </div>
+        <div class="d1-step pending" style="border-color:rgba(244,63,94,0.2);background:rgba(244,63,94,0.03);">
+          <div class="d1-step-num" style="background:rgba(244,63,94,0.15);color:var(--signal-danger);font-size:9px;">!</div>
+          <div class="d1-step-body">
+            <div class="d1-step-action">click("#submit-form")</div>
+            <div class="d1-step-meta"><span style="font-size:10px;color:var(--signal-danger);">🔒 Requires confirmation</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="d1-waveform">
+        <div class="d1-wave-bars">
+          <div class="d1-bar"></div><div class="d1-bar"></div><div class="d1-bar"></div>
+          <div class="d1-bar"></div><div class="d1-bar"></div><div class="d1-bar"></div>
+        </div>
+        <span class="d1-wave-text">Always listening — speak anytime to interrupt</span>
+      </div>
+    </div>
+
+    <div class="d1-taskbar">
+      <div class="d1-task-input">
+        <span class="d1-task-placeholder">Type a task or speak...</span>
+      </div>
+      <div class="d1-mic-btn"><span class="mic-icon"></span></div>
+      <div class="d1-stop-btn"><span class="stop-icon"></span> Stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIRECTION 2: SPLIT FOCUS ===== -->
+<div id="d2" class="section d2">
+  <div class="section-header">
+    <h2>Direction ② — Split Focus</h2>
+    <p>Thinking Panel left (320px), browser view right. Panel-first hierarchy — agent reasoning is primary, browser is the execution surface. Good for trust-building; novice-friendly.</p>
+  </div>
+  <div class="d2-layout">
+    <div class="d2-panel">
+      <div class="d2-panel-top">
+        <div class="d2-panel-title">Fill monthly compliance form</div>
+        <div class="d2-panel-sub">6 steps · Step 3 of 6 active</div>
+        <div class="d2-progress"><div class="d2-progress-fill"></div></div>
+      </div>
+      <div class="d2-steps">
+        <div class="d2-step done"><div class="d2-step-icon">✓</div><div class="d2-step-text">Navigate to vendor portal</div></div>
+        <div class="d2-step done"><div class="d2-step-icon">✓</div><div class="d2-step-text">Fill vendor name field</div></div>
+        <div class="d2-step active"><div class="d2-step-icon">▶</div><div class="d2-step-text">Select category code dropdown</div></div>
+        <div class="d2-step pending"><div class="d2-step-icon"></div><div class="d2-step-text">Fill submission period</div></div>
+        <div class="d2-step pending"><div class="d2-step-icon"></div><div class="d2-step-text">Upload certificate file</div></div>
+        <div class="d2-step pending"><div class="d2-step-icon"></div><div class="d2-step-text" style="color:var(--signal-danger)">Submit form (confirmation required)</div></div>
+      </div>
+      <div class="d2-narration">
+        <div class="d2-narration-label">ARIA says</div>
+        <div class="d2-narration-text">"I can see the category code dropdown. Selecting CAT-2047-B now..."</div>
+      </div>
+    </div>
+    <div class="d2-browser">
+      <div class="d1-browser-bar">
+        <div class="d1-browser-dot" style="background:#ef4444"></div>
+        <div class="d1-browser-dot" style="background:#f59e0b"></div>
+        <div class="d1-browser-dot" style="background:#22c55e"></div>
+        <div class="d1-browser-url">vendor-portal.example.com/compliance/monthly-form</div>
+      </div>
+      <div class="d1-browser-content">
+        <div class="faux-page">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px;color:#e4e4e7;">Monthly Compliance Submission</div>
+          <div class="faux-form-label">Vendor Name</div>
+          <div class="faux-form-input filled">Acme Supplies Ltd.</div>
+          <div class="faux-form-label">Category Code</div>
+          <div class="faux-form-input" style="border-color:rgba(59,130,246,0.6);box-shadow:0 0 8px rgba(59,130,246,0.2);">▾ Selecting: CAT-2047-B...</div>
+          <div class="faux-form-label">Submission Period</div>
+          <div class="faux-form-input">▾ Select month...</div>
+        </div>
+      </div>
+    </div>
+    <div class="d2-taskbar">
+      <div class="d2-voice-pill"><div class="d2-voice-ring"></div><div class="d2-voice-text">Always listening</div></div>
+      <div class="d2-input"><div class="d2-input-placeholder">Type to redirect or correct...</div></div>
+      <div class="d1-stop-btn"><span class="stop-icon"></span> Stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIRECTION 3: IMMERSIVE ===== -->
+<div id="d3" class="section d3">
+  <div class="section-header">
+    <h2>Direction ③ — Immersive Overlay <span class="tag tag-bold">Bold</span></h2>
+    <p>Browser fills the full viewport. Thinking Panel floats as a translucent left overlay. Voice indicator glows in the bottom bar. Maximum browser immersion — the agent feels invisible until you need it.</p>
+  </div>
+  <div class="d3-layout">
+    <div class="d3-browser-bg">
+      <div class="d1-browser-bar" style="background:#0E0E1A;border-bottom-color:#1a1a2e;">
+        <div class="d1-browser-dot" style="background:#ef4444"></div>
+        <div class="d1-browser-dot" style="background:#f59e0b"></div>
+        <div class="d1-browser-dot" style="background:#22c55e"></div>
+        <div style="flex:1;height:22px;background:#141420;border-radius:3px;display:flex;align-items:center;padding:0 10px;font-size:11px;color:#4a4a6a;font-family:monospace;">vendor-portal.example.com</div>
+      </div>
+      <div style="padding:20px;">
+        <div class="faux-page">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px;color:#e4e4e7;">Monthly Compliance Submission</div>
+          <div class="faux-form-label">Vendor Name</div>
+          <div class="faux-form-input filled">Acme Supplies Ltd.</div>
+          <div class="faux-form-label">Category Code</div>
+          <div class="faux-form-input filled">CAT-2047-B</div>
+          <div class="faux-form-label">Submission Period</div>
+          <div class="faux-form-input" style="border-color:rgba(59,130,246,0.5);">▾ February 2026</div>
+        </div>
+      </div>
+    </div>
+    <div class="d3-left-panel">
+      <div class="d3-panel-header">
+        <div class="d3-logo">ARIA</div>
+        <div class="d3-status-chip"><div class="d1-voice-dot"></div>Executing · Step 3</div>
+      </div>
+      <div class="d3-steps">
+        <div class="d3-step done">
+          <div class="d3-step-header"><span class="d3-step-num">01</span><span class="d3-step-status">DONE</span></div>
+          <div class="d3-step-action">navigate("vendor-portal.example.com/compliance")</div>
+        </div>
+        <div class="d3-step done">
+          <div class="d3-step-header"><span class="d3-step-num">02</span><span class="d3-step-status">DONE</span></div>
+          <div class="d3-step-action">fill("#vendor-name", "Acme Supplies Ltd.")</div>
+        </div>
+        <div class="d3-step active">
+          <div class="d3-step-header"><span class="d3-step-num">03</span><span class="d3-step-status">RUNNING</span></div>
+          <div class="d3-step-action">select("#submission-period", "February 2026")</div>
+          <div class="d3-screenshot">📸 Annotated screenshot</div>
+        </div>
+        <div class="d3-step pending">
+          <div class="d3-step-header"><span class="d3-step-num">04</span><span class="d3-step-status">PENDING</span></div>
+          <div class="d3-step-action">request_input("certificate_file")</div>
+        </div>
+        <div class="d3-step pending" style="border-color:rgba(244,63,94,0.2);">
+          <div class="d3-step-header"><span class="d3-step-num">05</span><span class="d3-step-status" style="background:rgba(244,63,94,0.1);color:var(--signal-danger);">CONFIRM</span></div>
+          <div class="d3-step-action">click("#submit") — irreversible</div>
+        </div>
+      </div>
+    </div>
+    <div class="d3-bottom-bar">
+      <div class="d3-input">
+        <div class="d3-input-text">Speak or type to interrupt...</div>
+        <div class="d3-voice-indicator"><span class="mic-icon"></span></div>
+      </div>
+      <div class="d3-stop">⏹ Stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIRECTION 4: TERMINAL ===== -->
+<div id="d4" class="section d4">
+  <div class="section-header" style="background:#080810;border-bottom-color:#1a1a2e;">
+    <h2>Direction ④ — Terminal / Power User</h2>
+    <p style="color:#4a4a7a;">Monospace log-style thinking panel. Dark navy palette. Developer-grade density. Appeals to Ravi (QA founder) and power users. Requires technical comfort to feel natural.</p>
+  </div>
+  <div class="d4-layout">
+    <div class="d4-browser">
+      <div class="d4-browser-chrome">
+        <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></div>
+        <div class="d4-url">vendor-portal.example.com/compliance/monthly-form</div>
+      </div>
+      <div style="padding:16px;">
+        <div style="font-size:13px;font-weight:600;color:#a0a0c0;margin-bottom:14px;">Monthly Compliance Submission</div>
+        <div class="faux-form-label" style="color:#4a4a6a;">Vendor Name</div>
+        <div class="faux-form-input filled" style="background:#111118;border-color:#2a2a4a;font-family:monospace;font-size:11px;">Acme Supplies Ltd.</div>
+        <div class="faux-form-label" style="color:#4a4a6a;">Category Code</div>
+        <div class="faux-form-input filled" style="background:#111118;border-color:rgba(59,130,246,0.3);font-family:monospace;font-size:11px;">CAT-2047-B</div>
+        <div class="faux-form-label" style="color:#4a4a6a;">Period</div>
+        <div class="faux-form-input" style="background:#111118;border-color:#2a2a4a;font-family:monospace;font-size:11px;">▾ Select...</div>
+      </div>
+    </div>
+    <div class="d4-panel">
+      <div class="d4-terminal-header">
+        <span class="d4-terminal-title">aria-agent</span>
+        <span style="color:#3a3a5a;">|</span>
+        <span class="d4-terminal-status">RUNNING · step 3/6</span>
+        <span style="margin-left:auto;font-size:10px;font-family:monospace;color:#3a3a5a;">session: sess_4f2a1b</span>
+      </div>
+      <div class="d4-log">
+        <div class="d4-log-line"><span class="d4-log-ts">14:32:01</span><span class="d4-log-tag done">[DONE]</span><span class="d4-log-msg">navigate vendor-portal.example.com · conf=0.94</span></div>
+        <div class="d4-log-line"><span class="d4-log-ts">14:32:04</span><span class="d4-log-tag done">[DONE]</span><span class="d4-log-msg">fill #vendor-name → "Acme Supplies Ltd." · conf=0.97</span></div>
+        <div class="d4-log-line"><span class="d4-log-ts">14:32:07</span><span class="d4-log-tag done">[DONE]</span><span class="d4-log-msg">fill #category-code → "CAT-2047-B" · conf=0.91</span></div>
+        <div class="d4-log-line active"><span class="d4-log-ts">14:32:09</span><span class="d4-log-tag running">[RUN] </span><span class="d4-log-msg">select #period → "February 2026" · conf=0.88</span></div>
+        <div class="d4-log-line"><span class="d4-log-ts">—</span><span class="d4-log-tag pending">[WAIT]</span><span class="d4-log-msg">request_input: certificate_file_path</span></div>
+        <div class="d4-log-line"><span class="d4-log-ts">—</span><span class="d4-log-tag warn">[CONF]</span><span class="d4-log-msg">click #submit-form · ⚠ destructive · awaiting confirmation</span></div>
+      </div>
+      <div class="d4-voice-section">
+        <div class="d4-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <span class="d4-voice-label">VAD · always active · speak to interrupt</span>
+      </div>
+    </div>
+    <div class="d4-taskbar-wrap">
+      <div class="d4-taskbar">
+        <span class="d4-prompt">aria&gt;</span>
+        <span class="d4-task-field">Fill monthly compliance form on vendor portal<span class="d4-cursor-blink"></span></span>
+        <div class="d1-stop-btn" style="font-family:monospace;font-size:11px;"><span class="stop-icon"></span> SIGINT</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIRECTION 5: CARD-FIRST ===== -->
+<div id="d5" class="section d5">
+  <div class="section-header">
+    <h2>Direction ⑤ — Card-First</h2>
+    <p>Each step is a card — collapsible, with embedded screenshot preview. More visual breathing room. Slightly lower density but very readable for Margaret (novice persona). Familiar task-list metaphor.</p>
+  </div>
+  <div class="d5-layout">
+    <div class="d5-top">
+      <div class="d5-browser">
+        <div class="d1-browser-bar">
+          <div class="d1-browser-dot" style="background:#ef4444"></div>
+          <div class="d1-browser-dot" style="background:#f59e0b"></div>
+          <div class="d1-browser-dot" style="background:#22c55e"></div>
+          <div class="d1-browser-url">vendor-portal.example.com/compliance</div>
+        </div>
+        <div style="padding:20px;">
+          <div class="faux-page">
+            <div style="font-size:14px;font-weight:600;color:#e4e4e7;margin-bottom:16px;">Monthly Compliance Submission</div>
+            <div class="faux-form-label">Vendor Name</div>
+            <div class="faux-form-input filled">Acme Supplies Ltd.</div>
+            <div class="faux-form-label">Category Code</div>
+            <div class="faux-form-input" style="border-color:rgba(59,130,246,0.5);box-shadow:0 0 10px rgba(59,130,246,0.15);">▾ CAT-2047-B ↓ (selecting...)</div>
+          </div>
+        </div>
+      </div>
+      <div class="d5-right">
+        <div class="d5-task-card">
+          <div class="d5-task-label">Current Task</div>
+          <div class="d5-task-text">Fill the monthly compliance form on the vendor portal</div>
+        </div>
+        <div class="d5-steps-header">
+          <span>Steps</span>
+          <span class="d5-count">3 of 6 complete</span>
+        </div>
+        <div class="d5-steps">
+          <div class="d5-step-card done">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot"></div>
+              <div class="d5-step-card-title">Navigate to vendor portal</div>
+              <span class="d5-step-card-badge conf-h">94%</span>
+            </div>
+          </div>
+          <div class="d5-step-card done">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot"></div>
+              <div class="d5-step-card-title">Fill vendor name</div>
+              <span class="d5-step-card-badge conf-h">97%</span>
+            </div>
+          </div>
+          <div class="d5-step-card active">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot"></div>
+              <div class="d5-step-card-title">Select category code</div>
+              <span class="d5-step-card-badge conf-m">72%</span>
+            </div>
+            <div class="d5-step-screenshot">📸 Screenshot preview</div>
+          </div>
+          <div class="d5-step-card pending">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot"></div>
+              <div class="d5-step-card-title">Fill submission period</div>
+              <span class="d5-step-card-badge conf-h">88%</span>
+            </div>
+          </div>
+          <div class="d5-step-card pending">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot"></div>
+              <div class="d5-step-card-title" style="color:var(--text-disabled);">Upload certificate</div>
+              <span style="font-size:10px;color:var(--signal-warning);padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);">Needs input</span>
+            </div>
+          </div>
+          <div class="d5-step-card pending" style="border-color:rgba(244,63,94,0.2);">
+            <div class="d5-step-card-header">
+              <div class="d5-step-dot" style="background:var(--signal-danger);"></div>
+              <div class="d5-step-card-title" style="color:var(--text-disabled);">Submit form</div>
+              <span style="font-size:10px;color:var(--signal-danger);padding:2px 6px;border-radius:3px;background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.2);">Confirm req.</span>
+            </div>
+          </div>
+        </div>
+        <div class="d5-voice-bar">
+          <div class="d5-wave-container">
+            <div class="d1-bar"></div><div class="d1-bar"></div><div class="d1-bar"></div><div class="d1-bar"></div><div class="d1-bar"></div>
+          </div>
+          <div class="d5-voice-text">"Selecting the category code now..."</div>
+        </div>
+      </div>
+    </div>
+    <div class="d5-bottom">
+      <div class="d5-task-input">
+        <span class="d5-task-input-text">Type a task or speak...</span>
+      </div>
+      <div class="d5-mic"><span class="mic-icon"></span></div>
+      <div class="d1-stop-btn"><span class="stop-icon"></span> Stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIRECTION 6: FOCUS MODE ===== -->
+<div id="d6" class="section d6">
+  <div class="section-header">
+    <h2>Direction ⑥ — Focus Mode with Tabbed Sidebar</h2>
+    <p>Header bar with task breadcrumb + voice chip. Right sidebar tabs between Steps / Audit Log / Screenshots. Cleaner chrome, easier to scan. Strong for the demo video presentation.</p>
+  </div>
+  <div class="d6-layout">
+    <div class="d6-header">
+      <div class="d6-logo">ARIA</div>
+      <div class="d6-task-breadcrumb">Task: <span>"Fill monthly compliance form on vendor portal"</span></div>
+      <div class="d6-step-indicator">Step <strong>3</strong> of 6</div>
+      <div class="d6-voice-chip"><div class="d6-voice-chip-dot"></div><div class="d6-voice-chip-text">Always listening</div></div>
+    </div>
+    <div class="d6-main">
+      <div class="d6-browser">
+        <div class="d1-browser-bar">
+          <div class="d1-browser-dot" style="background:#ef4444"></div>
+          <div class="d1-browser-dot" style="background:#f59e0b"></div>
+          <div class="d1-browser-dot" style="background:#22c55e"></div>
+          <div class="d1-browser-url">vendor-portal.example.com/compliance/monthly-form</div>
+        </div>
+        <div style="padding:20px;">
+          <div class="faux-page">
+            <div style="font-size:14px;font-weight:600;color:#e4e4e7;margin-bottom:16px;">Monthly Compliance Submission</div>
+            <div class="faux-form-label">Vendor Name</div>
+            <div class="faux-form-input filled">Acme Supplies Ltd.</div>
+            <div class="faux-form-label">Category Code</div>
+            <div class="faux-form-input filled">CAT-2047-B</div>
+            <div class="faux-form-label">Submission Period</div>
+            <div class="faux-form-input" style="border-color:rgba(59,130,246,0.5);animation:pulse-border 2s infinite;">▾ Selecting: February 2026</div>
+          </div>
+        </div>
+      </div>
+      <div class="d6-sidebar">
+        <div class="d6-sidebar-tabs">
+          <div class="d6-tab active">Steps</div>
+          <div class="d6-tab">Audit Log</div>
+          <div class="d6-tab">Screenshots</div>
+        </div>
+        <div class="d6-steps">
+          <div class="d6-step-row done"><div class="d6-step-circle">✓</div><div class="d6-step-info"><div class="d6-step-name">Navigate to vendor portal</div><div class="d6-step-sub">conf 94% · 2s</div></div></div>
+          <div class="d6-connector"></div>
+          <div class="d6-step-row done"><div class="d6-step-circle">✓</div><div class="d6-step-info"><div class="d6-step-name">Fill vendor name</div><div class="d6-step-sub">conf 97% · 1s</div></div></div>
+          <div class="d6-connector"></div>
+          <div class="d6-step-row active"><div class="d6-step-circle">▶</div><div class="d6-step-info"><div class="d6-step-name">Select submission period</div><div class="d6-step-sub" style="color:var(--signal-active);">Running · conf 88%</div></div></div>
+          <div class="d6-connector"></div>
+          <div class="d6-step-row pending"><div class="d6-step-circle"></div><div class="d6-step-info"><div class="d6-step-name">Upload certificate</div><div class="d6-step-sub" style="color:var(--signal-warning);">⚠ User input needed</div></div></div>
+          <div class="d6-connector"></div>
+          <div class="d6-step-row pending"><div class="d6-step-circle" style="background:rgba(244,63,94,0.15);color:var(--signal-danger);font-size:8px;">!</div><div class="d6-step-info"><div class="d6-step-name">Submit form</div><div class="d6-step-sub" style="color:var(--signal-danger);">🔒 Confirmation required</div></div></div>
+        </div>
+        <div class="d6-narration-box">
+          <div class="d6-narration-label"><div class="d1-voice-dot" style="width:6px;height:6px;"></div>ARIA speaking</div>
+          <div class="d6-narration-text">"I can see the period dropdown. Selecting February 2026 now..."</div>
+        </div>
+      </div>
+    </div>
+    <div class="d6-bottom">
+      <div class="d5-task-input" style="flex:1;">
+        <span class="d5-task-input-text">Type to redirect or add context...</span>
+      </div>
+      <div class="d5-mic" style="width:40px;height:40px;"><span class="mic-icon"></span></div>
+      <div class="d1-stop-btn"><span class="stop-icon"></span> Stop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EVALUATION ===== -->
+<div id="eval" class="section">
+  <div class="eval-panel">
+    <h2>Direction Evaluation Guide</h2>
+    <p>Compare design directions against ARIA's core principles: transparency, voice primacy, calm confidence, and demo impact.</p>
+
+    <div class="eval-criteria">
+      <h3>Evaluation Criteria</h3>
+      <ul>
+        <li>Layout intuitiveness — which information hierarchy matches ARIA's priorities (browser vs. thinking panel)?</li>
+        <li>Voice state visibility — which direction makes the "always listening" state most evident?</li>
+        <li>Barge-in readiness — which direction makes interruption feel most natural and expected?</li>
+        <li>Trust/confidence signals — which makes step status and confidence scores most readable at a glance?</li>
+        <li>Demo camera-readiness — which looks most impressive in a 4-minute demo video?</li>
+        <li>Novice accessibility — which could Margaret (retired teacher) navigate without confusion?</li>
+      </ul>
+    </div>
+
+    <div class="eval-grid">
+      <div class="eval-card">
+        <div class="eval-badge">①</div>
+        <h3>Command Center</h3>
+        <p>Browser-dominant layout, fixed right panel, pinned bottom bar. Maximum efficiency. Mirrors professional tool aesthetics.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Best browser space · Clearest agent panel · Demo-strong</div>
+          <div class="eval-cons">Dense for novice users</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-badge" style="background:var(--signal-pause);">②</div>
+        <h3>Split Focus</h3>
+        <p>Panel-left layout. Agent reasoning is the primary surface. Best for building trust with less technical users.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Trust-first · Narration prominent · Novice-friendly</div>
+          <div class="eval-cons">Less browser space · Panel feels dominant</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-badge" style="background:linear-gradient(135deg,#3b82f6,#a78bfa);border:none;">③</div>
+        <h3>Immersive Overlay</h3>
+        <p>Floating translucent panel over full-viewport browser. Visually striking. Best "wow" factor for demo.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Highest visual impact · Full browser view · Demo wow</div>
+          <div class="eval-cons">Panel may obscure content · Glassmorphism harder to build</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-badge" style="background:#1e1e3a;color:#3b82f6;border:1px solid #3b82f6;">④</div>
+        <h3>Terminal</h3>
+        <p>Developer-focused monospace log panel. Maximum data density. Ravi's natural habitat. Alienating to Margaret.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Power-user appeal · Precise confidence data · QA artifact ready</div>
+          <div class="eval-cons">Not accessible to novices · Cold aesthetic</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-badge" style="background:var(--signal-success);">⑤</div>
+        <h3>Card-First</h3>
+        <p>Steps as collapsible cards with screenshot previews. Most breathing room. Familiar to all skill levels.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Most accessible · Screenshot-rich · Clear per-step focus</div>
+          <div class="eval-cons">Lower density · Slower to scan for experts</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <div class="eval-badge" style="background:#f59e0b;">⑥</div>
+        <h3>Focus Mode</h3>
+        <p>Tabbed sidebar with breadcrumb header. Cleanest chrome. Excellent for demo footage — organized without clutter.</p>
+        <div class="eval-pros-cons">
+          <div class="eval-pros">Cleanest header · Tabs add depth · Demo-polished</div>
+          <div class="eval-cons">Tab switching adds interaction cost</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:20px 24px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--signal-active);">Facilitator Recommendation</div>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">
+        <strong style="color:var(--text-primary);">Direction ① (Command Center)</strong> is recommended as the primary direction. It maximizes browser real estate while keeping the thinking panel prominent at a fixed 400px — matching the architecture spec exactly. It has the highest demo impact, handles both power users (Ravi) and guided users (Margaret) with the same layout, and the pinned task bar reinforces the always-available interruption model.<br><br>
+        <strong style="color:var(--text-primary);">Direction ⑥ (Focus Mode)</strong> is a strong alternative if you want a cleaner header chrome and tabbed audit log access.<br><br>
+        <strong style="color:var(--text-primary);">Direction ③ (Immersive)</strong> is recommended as a <em>demo-mode</em> variant — maximum visual impact for the submission video, potentially surfaced as a toggle.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESTRUCTIVE ACTION GUARD DEMO MODAL -->
+<div class="d-confirm-modal" id="confirmModal">
+  <div class="d-confirm-card">
+    <div class="d-confirm-icon">🔒</div>
+    <div class="d-confirm-title">Irreversible Action Detected</div>
+    <div class="d-confirm-body">ARIA is about to perform an action that cannot be undone.</div>
+    <div class="d-confirm-action">click("#submit-form") — Submit compliance form to vendor portal</div>
+    <div class="d-confirm-say">Say <strong>"Yes, submit"</strong> or <strong>"Cancel"</strong> — or tap below</div>
+    <div class="d-confirm-buttons">
+      <button class="d-confirm-yes" onclick="closeConfirm()">✓ Yes, Submit</button>
+      <button class="d-confirm-no" onclick="closeConfirm()">✗ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+function showConfirm() {
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('show');
+}
+</script>
+</body>
+</html>

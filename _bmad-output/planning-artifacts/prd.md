@@ -25,7 +25,7 @@ classification:
 
 ARIA (Adaptive Reasoning & Interaction Agent) is a voice-driven, multimodal UI navigator that executes web-based tasks on behalf of users while keeping them visibly in control throughout execution. Users assign tasks by speaking or typing; ARIA decomposes the task into a visible step plan, executes it in a live browser session using Gemini's Computer Use model, narrates its reasoning aloud, and accepts voice interruptions mid-action — allowing users to redirect without stopping and restarting. Before any irreversible action, ARIA surfaces a confirmation in both voice and UI. Every completed task generates a full audit log with annotated screenshots, replayable as undo history or step-by-step documentation.
 
-ARIA is built on Google's full agentic stack: Gemini 3.1 Pro (Planner), Gemini 2.5 Computer Use (Executor), Gemini Live API with native VAD (voice streaming and barge-in), Google ADK (dual-agent orchestration and observability), Cloud Run, Firestore, and Firebase Hosting. It is entered in the **UI Navigator** category of the Google Gemini Live Agent Challenge, targeting the Grand Prize and Best of UI Navigators award.
+ARIA is built on Google's full agentic stack: Gemini 3.1 Pro (Planner), Gemini 3 flash with built-in computer use (Executor), Gemini Live API with native VAD (voice streaming and barge-in), Google ADK (dual-agent orchestration and observability), Cloud Run, Firestore, and Firebase Hosting. It is entered in the **UI Navigator** category of the Google Gemini Live Agent Challenge, targeting the Grand Prize and Best of UI Navigators award.
 
 ### What Makes This Special
 
@@ -34,11 +34,10 @@ Every existing UI navigator — Atlas (OpenAI), Comet (Perplexity), browser-use,
 Three capabilities combine to make this real, none of which any competitor delivers:
 
 1. **Voice interruption mid-execution** — Gemini Live API's native Voice Activity Detection enables true barge-in: users say "wait, wrong field" and ARIA pauses, re-listens, and adapts its plan in under 1 second. No buffering, no polling. This is only possible on this specific model stack.
-2. **Live thinking panel** — ADK's native OpenTelemetry observability feeds a real-time reasoning panel showing what ARIA is looking at, what it plans to do next, and its confidence per step. Transparency is the steering mechanism — users decide whether to let ARIA continue or redirect based on what they see.
+2. **Full multimodal loop — audio in, live vision, audio out — all real-time** — ARIA does not use voice as a chat layer bolted on top of automation. Every stage of the interaction loop is natively multimodal: Gemini Live API processes streaming audio and responds in natural voice; Gemini Computer Use interprets live screenshots to navigate any UI without DOM parsing; voice narration closes the loop back to the user while execution is still in progress. No other UI navigator runs audio input, visual page understanding, and audio output simultaneously in a tight, real-time feedback cycle.
 3. **Visible Planner + Executor architecture** — The dual-agent split (Gemini 3.1 Pro reasoning + Gemini Computer Use acting) is exposed to the user as the UX, not hidden as an implementation detail. Users experience an agent that *thinks before it acts*.
 
-The core insight: users don't distrust AI agents because they lack capability. They distrust them because they can't see where the agent is heading and can't stop it in time. ARIA solves the visibility and control problem — and trust follows automatically. On 10 of 12 competitive dimensions, no existing product matches ARIA's capability set.
-
+The core insight: users don't distrust AI agents because they lack capability. They distrust them because they can't see where the agent is heading and can't stop it in time. ARIA solves the visibility and control problem — and trust follows automatically.
 ### Project Classification
 
 | Dimension | Value |
@@ -216,8 +215,8 @@ No existing UI navigator routes voice input through to live browser actions. Atl
 **2. Barge-in Interruption Mid-Execution**
 Mid-execution voice interruption with sub-1-second response is only achievable via Gemini Live API's native Voice Activity Detection. No buffered or polling approach reaches this latency target. The ability to say "wait, wrong field" and have an actively-executing agent pause, re-listen, and adapt its plan is unprecedented in the UI navigator space. It is the moment that makes ARIA feel like a collaborator rather than a script.
 
-**3. Transparency as a Steering Mechanism (not just feedback)**
-The live thinking panel is not a debug log or status indicator. It is the primary UX surface through which users actively decide whether to let ARIA continue or redirect it. Confidence scores, step previews, and annotated screenshots serve agency, not just information. Manus shows a passive computer-view; no competitor has built a transparency layer designed explicitly to empower user steering.
+**3. Unified Multimodal Interaction Loop (Audio → Vision → Audio)**
+Other UI navigators treat voice as an input modality only — the agent takes a voice command and then executes silently. ARIA closes the entire loop multimodally: voice in (Gemini Live API streaming VAD), live visual understanding of each page state (Gemini Computer Use screenshot interpretation), and voice narration back to the user as actions unfold — all running simultaneously, not sequentially. This makes the interaction feel like directing a collaborator, not issuing a command to a script. The combination of all three modalities in a single real-time pipeline is what no competitor currently achieves.
 
 **4. Visible Dual-Agent Architecture as the UX**
 The Planner + Executor split (Gemini 3.1 Pro reasoning → Gemini Computer Use acting) is intentionally exposed to the user as the product experience. Users see an agent that thinks before it acts. Every competitor hides their internal architecture; ARIA makes it the demonstration.
@@ -227,7 +226,7 @@ ARIA is the first product to combine Gemini 3.1 Pro + Gemini Computer Use + Gemi
 
 ### Market Context & Competitive Landscape
 
-Across all five major competitors — Atlas, Comet, browser-use, Skyvern, Manus — zero support voice-in → UI-action. Zero show a live reasoning panel. Zero expose a visible planner layer. Zero implement barge-in interruption. ARIA leads on 10 of 12 competitive dimensions (per market research). The gap is not incremental — it is structural: competitors built execution engines; ARIA builds an interaction layer on top of execution capability.
+Across all five major competitors — Atlas, Comet, browser-use, Skyvern, Manus — zero support voice-in → UI-action as a native interaction paradigm. Zero implement barge-in interruption. Zero expose a visible planner layer. Zero close the multimodal loop with audio output during live execution. Some products surface execution progress in a side panel, but none combine streaming audio input, live visual page understanding, and real-time audio narration in a single coherent interaction loop. ARIA leads on 10 of 12 competitive dimensions (per market research). The gap is structural: competitors built execution engines; ARIA builds a multimodal interaction layer on top of execution capability.
 
 The browser automation benchmark ceiling (89.1% on WebVoyager for browser-use; 85.85% for Skyvern) confirms that execution accuracy is no longer the differentiating frontier. The open frontier is trust, transparency, and real-time human-agent collaboration — exactly where ARIA operates.
 

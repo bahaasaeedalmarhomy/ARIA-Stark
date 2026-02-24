@@ -309,13 +309,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: google-github-actions/auth
-      - run: adk deploy cloud-run --project $GCP_PROJECT --region us-central1 --min-instances 1
+      - run: |
+          adk deploy cloud-run \
+            --project $GCP_PROJECT \
+            --region us-central1 \
+            --min-instances 1 \
+            --concurrency 1 \
+            --memory 4Gi \
+            --cpu 2
   deploy-frontend:
     runs-on: ubuntu-latest
     steps:
       - run: npm run build
       - uses: FirebaseExtended/action-hosting-deploy
 ```
+
+**Concurrency constraint rationale:** `--concurrency 1` is mandatory. Default Cloud Run concurrency is 80 requests/instance. Two concurrent ARIA sessions on one instance = two headless Chromium processes (~500MB each) + two audio WebSocket relays in a 4GB container = OOM crash. With `--concurrency 1`, Cloud Run auto-scales to one instance per active session, giving each session the full 4GB. `--min-instances 1` ensures the warm instance is always available for the first request.
 
 **Environments:**
 - Development: `.env.local` (never committed); `adk run` local dev server
@@ -516,6 +525,62 @@ state.steps.push(newStep); // direct mutation
 
 **Context window management:** Executor context = system prompt + current step plan + last 3 completed step results + current screenshot. Older steps summarized into a single `completed_steps_summary` string.
 
+**Barge-in cancellation primitive:** Each session owns one `asyncio.Event` keyed by `session_id`, stored in a module-level dict in `session_service.py`. Pattern:
+
+```python
+# session_service.py
+_cancel_flags: dict[str, asyncio.Event] = {}
+
+def get_cancel_flag(session_id: str) -> asyncio.Event:
+    if session_id not in _cancel_flags:
+        _cancel_flags[session_id] = asyncio.Event()
+    return _cancel_flags[session_id]
+
+def signal_barge_in(session_id: str):
+    get_cancel_flag(session_id).set()
+
+def reset_cancel_flag(session_id: str):
+    get_cancel_flag(session_id).clear()
+```
+
+`voice_handler.py` calls `signal_barge_in(session_id)` when VAD detects speech mid-execution. `playwright_computer.py` checks `cancel_flag.is_set()` before AND after every Playwright `await` call and raises `BargeInException` if set. The Executor's step loop catches `BargeInException`, stops execution, and returns control to `voice_handler.py` for replanning. This is the correct Python pattern — `task.cancel()` is NOT used because it injects `CancelledError` unpredictably across unrelated awaits.
+
+**Audio relay queue pattern:** `voice_handler.py` must treat the browser ↔ Gemini Live relay as a pure pass-through pipe using `asyncio.Queue`. No logging, no inspection, no JSON parsing of audio bytes in the relay path:
+
+```python
+# voice_handler.py — canonical structure
+async def relay_audio(session_id: str, browser_ws: WebSocket):
+    inbound_q: asyncio.Queue[bytes] = asyncio.Queue()
+    outbound_q: asyncio.Queue[bytes] = asyncio.Queue()
+
+    async def browser_to_queue():
+        async for chunk in browser_ws.iter_bytes():
+            await inbound_q.put(chunk)  # never inspect or log chunk
+
+    async def queue_to_gemini(gemini_session):
+        while True:
+            chunk = await inbound_q.get()
+            await gemini_session.send(chunk)
+
+    async def gemini_to_browser(gemini_session):
+        async for response in gemini_session:
+            await outbound_q.put(response.audio)
+
+    async def queue_to_browser():
+        while True:
+            audio = await outbound_q.get()
+            await browser_ws.send_bytes(audio)
+
+    await asyncio.gather(
+        browser_to_queue(),
+        queue_to_gemini(gemini_session),
+        gemini_to_browser(gemini_session),
+        queue_to_browser(),
+    )
+```
+
+Rationale: Python's GIL causes micro-stutters when the event loop is busy with JSON parsing or logging while audio chunks are waiting. The queue decouples receipt from forwarding, keeping the hot path non-blocking. Any barge-in detection logic runs in a separate coroutine that reads from a side-channel, never from the audio queue itself.
+
 ---
 
 ### Enforcement Guidelines
@@ -528,6 +593,9 @@ state.steps.push(newStep); // direct mutation
 - Never execute a step where `is_destructive: true` without a confirmed `POST /confirm`
 - Always emit a `task_failed` SSE event on unhandled exceptions — no silent failures
 - Use `sess_` prefix + UUID v4 for all session IDs (format: `sess_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
+- Never use `task.cancel()` for barge-in — always use the session `asyncio.Event` cancellation primitive
+- Never log, inspect, or await anything in the audio relay hot path — pure `asyncio.Queue` pass-through only
+- Deploy with `--concurrency 1 --memory 4Gi` — never rely on Cloud Run default concurrency (80) for Playwright workloads
 
 ---
 
