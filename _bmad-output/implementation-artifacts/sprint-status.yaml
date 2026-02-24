@@ -1,0 +1,103 @@
+# generated: 2026-02-24
+# project: gemini-hackathon
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-24
+project: gemini-hackathon
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ─────────────────────────────────────────────────────────────────
+  # Epic 1: Project Foundation & Deployed Skeleton
+  # Users can access a live deployed ARIA application at a real public
+  # URL, submit a text task, and receive confirmation it was received —
+  # all running on Cloud Run + Firebase Hosting with CI/CD green.
+  # FRs: FR2, FR4, FR38, FR39, FR40 (scaffolded)
+  # ─────────────────────────────────────────────────────────────────
+  epic-1: in-progress
+  1-1-backend-scaffold-with-playwright-docker-image: done
+  1-2-frontend-scaffold-with-dark-theme-and-design-tokens: backlog
+  1-3-gcp-and-firebase-infrastructure-provisioning: backlog
+  1-4-firebase-anonymous-auth-and-session-start-api: backlog
+  1-5-task-input-ui-and-session-start-flow: backlog
+  1-6-cicd-pipeline-with-cloud-run-and-firebase-hosting-deployment: backlog
+  epic-1-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────
+  # Epic 2: Planner Agent + Live Thinking Panel
+  # Users can type a task and watch ARIA decompose it into an ordered,
+  # live-updating step plan in the thinking panel — with confidence
+  # scores and stagger animation as steps stream in.
+  # FRs: FR3, FR6, FR7, FR17, FR19, FR22
+  # ─────────────────────────────────────────────────────────────────
+  epic-2: backlog
+  2-1-planner-agent-with-canonical-step-plan-output: backlog
+  2-2-sse-stream-endpoint-for-agent-events: backlog
+  2-3-frontend-sse-consumer-and-thinking-panel-state: backlog
+  2-4-thinkingpanel-stepitem-and-confidencebadge-components: backlog
+  2-5-task-interpretation-display-and-stagger-animation: backlog
+  epic-2-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────
+  # Epic 3: Executor + Browser Automation + Audit Log
+  # Users can assign a task via text and watch ARIA fully execute it
+  # in a live browser session — navigating, clicking, typing, filling
+  # forms — while the thinking panel updates and the audit log fills.
+  # FRs: FR5, FR8–FR16, FR18, FR20, FR21 (text), FR33–FR37, FR41, FR42
+  # ─────────────────────────────────────────────────────────────────
+  epic-3: backlog
+  3-1-executor-agent-with-adk-sequentialagent-wiring: backlog
+  3-2-playwright-browser-actions: backlog
+  3-3-screenshot-capture-gcs-upload-and-step-sse-events: backlog
+  3-4-error-handling-page-load-timeouts-and-captcha-pause: backlog
+  3-5-firestore-audit-log-writer-and-mid-task-input-request: backlog
+  3-6-audit-log-viewer-ui-and-task-cancel: backlog
+  epic-3-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────
+  # Epic 4: Voice, Barge-in & Destructive Action Guard
+  # Users can speak a task, hear ARIA narrate its actions, interrupt
+  # mid-execution and have ARIA pause within 1 second, and receive
+  # voice + visual safety confirmations before any irreversible action.
+  # FRs: FR1, FR21 (audio), FR23–FR32
+  # ─────────────────────────────────────────────────────────────────
+  epic-4: backlog
+  4-1-websocket-audio-relay-backend: backlog
+  4-2-browser-audio-capture-and-web-audio-playback: backlog
+  4-3-voicewaveform-bargeinpulse-components-and-vad-visual-states: backlog
+  4-4-voice-barge-in-execution-halt-and-plan-adaptation: backlog
+  4-5-destructive-action-guard-voice-and-visual-confirmation: backlog
+  epic-4-retrospective: optional
