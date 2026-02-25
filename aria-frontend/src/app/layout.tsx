@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ViewportWarning } from "@/components/ui/viewport-warning";
+import { FirebaseAuthProvider } from "@/components/providers/firebase-auth-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,6 +27,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
       <body className="antialiased">
+        {/* FirebaseAuthProvider silently authenticates the user on page load */}
+        <FirebaseAuthProvider />
         <ViewportWarning />
         {children}
       </body>

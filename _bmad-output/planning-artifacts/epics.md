@@ -117,7 +117,7 @@ This document provides the complete epic and story breakdown for ARIA (Adaptive 
 ### Additional Requirements
 
 **Architecture — Infrastructure & Stack**
-- Starter: `create-next-app` (Next.js 15, TypeScript, App Router, Tailwind, ESLint, no Turbopack) for frontend; `adk new aria-backend` Python scaffold for backend — these are Epic 1 Story 1 and Story 2
+- Starter: `create-next-app` (Next.js 16, TypeScript, App Router, Tailwind v4, ESLint, Turbopack stable default) for frontend; `adk new aria-backend` Python scaffold for backend — these are Epic 1 Story 1 and Story 2
 - Backend runtime: Python 3.11+, Google ADK v1.25+, FastAPI entrypoint (`main.py`)
 - Container: `mcr.microsoft.com/playwright:v1.50.0-jammy` base image, 4GB RAM, `--no-sandbox --disable-dev-shm-usage`
 - Planner model: `gemini-3-1-pro`; Executor model: `gemini-3-flash` (built-in computer use via ADK `ComputerUseToolset`)
@@ -263,13 +263,13 @@ So that the backend can be built, containerized, and deployed to Cloud Run from 
 ### Story 1.2: Frontend Scaffold with Dark Theme and Design Tokens
 
 As a developer,
-I want a Next.js 15 frontend project scaffolded with TypeScript, Tailwind, shadcn/ui, and ARIA's dark design tokens configured,
+I want a Next.js 16 frontend project scaffolded with TypeScript, Tailwind, shadcn/ui, and ARIA's dark design tokens configured,
 So that all future UI work builds on the correct foundation without retrofitting styles.
 
 **Acceptance Criteria:**
 
 **Given** an empty `aria-frontend/` directory,
-**When** `npx create-next-app@latest` runs with TypeScript, App Router, Tailwind, ESLint, and no Turbopack,
+**When** `npx create-next-app@latest` runs with TypeScript, App Router, Tailwind, ESLint, and Turbopack (stable default in Next.js 16),
 **Then** the project starts successfully with `npm run dev` and displays the default Next.js page at `localhost:3000`.
 
 **Given** the project is initialized,

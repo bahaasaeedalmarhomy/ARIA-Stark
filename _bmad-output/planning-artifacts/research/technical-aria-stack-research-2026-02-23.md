@@ -25,7 +25,7 @@ This research answers the six concrete technical questions the ARIA team needs r
 | **B — Gemini Live API** | Use `gemini-live-2.5-flash-native-audio`; WebSocket transport; native VAD + barge-in; target <1s first-audio latency |
 | **C — Gemini 3 Pro for Planner** | Use `gemini-3-pro` via ADK; structure Planner as Sequential + HITL workflow agent; output structured JSON step plan |
 | **D — GCP Services** | Cloud Run for agent backend; Firestore for audit log + state; Cloud Storage for screenshots; Firebase Hosting for frontend; Vertex AI Agent Engine optional (post-hackathon) |
-| **E — Frontend** | Next.js 15 + React + SSE for thinking panel stream; WebSocket for voice audio; Tailwind + shadcn/ui |
+| **E — Frontend** | Next.js 16 + React + SSE for thinking panel stream; WebSocket for voice audio; Tailwind v4 + shadcn/ui |
 | **F — Playwright in Cloud** | Official `mcr.microsoft.com/playwright` Docker image; Cloud Run with 2–4 GB RAM, `--no-sandbox` flag; `--disable-dev-shm-usage` required |
 
 ---
@@ -389,7 +389,7 @@ SECTION 4 — SAFETY RULES
 
 ### E.1 Framework Decision
 
-**Next.js 15 + React** is the clear choice for ARIA's frontend in 2026:
+**Next.js 16 + React** is the clear choice for ARIA's frontend in 2026:
 
 | Requirement | Solution |
 |---|---|

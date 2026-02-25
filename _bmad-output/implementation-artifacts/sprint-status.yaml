@@ -51,8 +51,8 @@ development_status:
   1-1-backend-scaffold-with-playwright-docker-image: done
   1-2-frontend-scaffold-with-dark-theme-and-design-tokens: done
   1-3-gcp-and-firebase-infrastructure-provisioning: done
-  1-4-firebase-anonymous-auth-and-session-start-api: backlog
-  1-5-task-input-ui-and-session-start-flow: backlog
+  1-4-firebase-anonymous-auth-and-session-start-api: done
+  1-5-task-input-ui-and-session-start-flow: review
   1-6-cicd-pipeline-with-cloud-run-and-firebase-hosting-deployment: backlog
   epic-1-retrospective: optional
 

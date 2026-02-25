@@ -8,7 +8,7 @@ shadcn/ui is already specified in the architecture. This step confirms and exten
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Utility styling | Tailwind CSS v3 | All layout, spacing, typography, and color application |
+| Utility styling | Tailwind CSS v4 | All layout, spacing, typography, and color application |
 | Primitive components | shadcn/ui (Radix UI base) | Button, Card, Badge, Dialog, Toast, Separator, ScrollArea |
 | Custom components | Hand-built with Tailwind | VoiceWaveform, StepItem, ConfidenceBadge, ScreenshotViewer, BargeInPulse |
 | Theme | CSS custom properties | Dark-first; semantic confidence color tokens |
@@ -59,4 +59,4 @@ shadcn/ui is already specified in the architecture. This step confirms and exten
 - Scale: 12px step metadata → 14px primary UI → 16px task input → 20px section headers
 
 ---
-
+

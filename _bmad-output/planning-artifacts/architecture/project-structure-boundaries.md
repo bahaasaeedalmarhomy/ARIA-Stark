@@ -9,10 +9,9 @@ gemini-hackathon/
 │   └── workflows/
 │       └── deploy.yml               # GitHub Actions: deploy backend + frontend
 │
-├── aria-frontend/                   # Next.js 15 — Firebase Hosting
+├── aria-frontend/                   # Next.js 16 — Firebase Hosting
 │   ├── package.json
 │   ├── next.config.ts
-│   ├── tailwind.config.ts
 │   ├── tsconfig.json
 │   ├── .env.local                   # gitignored
 │   ├── .env.example
@@ -180,4 +179,4 @@ On barge-in
 ```
 
 ---
-
+

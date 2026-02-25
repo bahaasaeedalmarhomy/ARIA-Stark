@@ -6,7 +6,7 @@ Full-stack split architecture: TypeScript/Next.js frontend + Python/ADK backend 
 
 ### Starter Options Considered
 
-**Frontend:** `create-next-app` (official Next.js CLI) — the only supported way to bootstrap a Next.js 15 project with App Router, TypeScript, and Tailwind in one command.
+**Frontend:** `create-next-app` (official Next.js CLI) — the only supported way to bootstrap a Next.js 16 project with App Router, TypeScript, and Tailwind in one command.
 
 **Backend:** Google ADK CLI scaffold (`adk new`) — official ADK project generator that produces a ready-to-run multi-agent Python project with correct `pyproject.toml`, agent directory structure, and `.env` convention.
 
@@ -23,16 +23,15 @@ npx create-next-app@latest aria-frontend \
   --eslint \
   --app \
   --src-dir \
-  --import-alias "@/*" \
-  --no-turbopack
+  --import-alias "@/*"
 ```
 
 **Architectural Decisions Provided by Starter:**
 
 - **Language & Runtime:** TypeScript strict mode, Node.js 20+
-- **Framework:** Next.js 15 with App Router (`app/` directory) — server components by default, client components opt-in
-- **Styling Solution:** Tailwind CSS v3 — utility-first; shadcn/ui components added post-init via `npx shadcn@latest init`
-- **Build Tooling:** Webpack (Turbopack disabled — better ecosystem compatibility for hackathon)
+- **Framework:** Next.js 16 with App Router (`app/` directory) — server components by default, client components opt-in
+- **Styling Solution:** Tailwind CSS v4 — utility-first; CSS-native `@theme inline` replaces `tailwind.config.ts`; shadcn/ui components added post-init via `npx shadcn@latest init`
+- **Build Tooling:** Turbopack (stable default in Next.js 16 — replaces Webpack as the production-ready bundler)
 - **Linting/Formatting:** ESLint with Next.js config; Prettier added separately
 - **Project Structure:** `src/app/` for routes, `src/components/` for UI, `src/lib/` for utilities
 - **Real-time Transport:** Native `EventSource` API (SSE) for thinking panel; native `WebSocket` API for voice audio relay
@@ -61,4 +60,4 @@ cd aria-backend
 **Note:** Project initialization using both commands above should be the first two implementation stories — frontend first, then backend scaffold with Playwright image configuration.
 
 ---
-
+

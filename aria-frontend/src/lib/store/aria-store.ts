@@ -6,6 +6,9 @@ interface SessionSlice {
   sessionId: string | null;
   taskStatus: TaskStatus;
   taskDescription: string;
+  uid: string | null;       // Firebase Anonymous Auth uid
+  idToken: string | null;  // JWT token for API Authorization header
+  isSessionStarting: boolean; // tracks POST /api/task/start in-flight
 }
 
 interface VoiceSlice {
@@ -22,11 +25,14 @@ interface ThinkingPanelSlice {
 type ARIAStore = SessionSlice & VoiceSlice & ThinkingPanelSlice;
 
 export const useARIAStore = create<ARIAStore>()(
-  immer((set) => ({
+  immer(() => ({
     // Session slice
     sessionId: null,
     taskStatus: "idle",
     taskDescription: "",
+    uid: null,
+    idToken: null,
+    isSessionStarting: false,
     // Voice slice
     voiceStatus: "idle",
     isVoiceConnecting: false,

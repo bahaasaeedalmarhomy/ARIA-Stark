@@ -2,7 +2,7 @@
 
 ### Project-Type Overview
 
-ARIA's frontend is a single-page application (Next.js 15 + React) delivering a real-time interactive session interface. The application's primary UI surface is the live execution panel — a streaming view of the agent's reasoning, browser actions, and confidence states. The frontend is not content-driven; it is session-driven. All meaningful interaction happens within a single active task session.
+ARIA's frontend is a single-page application (Next.js 16 + React) delivering a real-time interactive session interface. The application's primary UI surface is the live execution panel — a streaming view of the agent's reasoning, browser actions, and confidence states. The frontend is not content-driven; it is session-driven. All meaningful interaction happens within a single active task session.
 
 ### Technical Architecture Considerations
 
@@ -37,9 +37,9 @@ Not applicable — ARIA is an authenticated application session interface, not a
 
 ### Implementation Considerations
 
-- **Next.js 15 App Router** — used for routing and server components where applicable; client components for all real-time surfaces
+- **Next.js 16 App Router** — used for routing and server components where applicable; client components for all real-time surfaces
 - **Tailwind CSS + shadcn/ui** — component system for rapid development within hackathon timeline
 - **Firebase Hosting** — static frontend deployment; connects to Cloud Run backend via HTTPS/WebSocket
 - **No offline mode** — ARIA requires live connection to Cloud Run backend and Gemini APIs; offline is a non-starter
 - **Audio pipeline:** Browser MediaRecorder → WebSocket → Python backend → Gemini Live API; response audio streamed back to browser Web Audio API
-
+

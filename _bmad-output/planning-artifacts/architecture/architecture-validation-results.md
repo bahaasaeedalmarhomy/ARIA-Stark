@@ -3,7 +3,7 @@
 ### Coherence Validation ✅
 
 **Decision Compatibility:**
-All technology choices are compatible. Python 3.11 + ADK v1.25 is the current stable pairing. `gemini-3-flash` with built-in computer use removes the need for a separate computer use model and is compatible with ADK's `ComputerUseToolset`. Next.js 15 App Router + Tailwind + shadcn/ui + Zustand have no version conflicts. Firebase Anonymous Auth integrates cleanly with Firestore security rules.
+All technology choices are compatible. Python 3.11 + ADK v1.25 is the current stable pairing. `gemini-3-flash` with built-in computer use removes the need for a separate computer use model and is compatible with ADK's `ComputerUseToolset`. Next.js 16 App Router + Tailwind v4 + shadcn/ui + Zustand have no version conflicts. Firebase Anonymous Auth integrates cleanly with Firestore security rules.
 
 **Pattern Consistency:**
 `snake_case` API fields align naturally with Python backend conventions. Zustand's immutable `set()` pattern is consistent with React's rendering model. The SSE envelope schema is aligned with ADK's OpenTelemetry event structure. All naming conventions are internally consistent across backend and frontend.
@@ -120,7 +120,7 @@ Every file in the project tree traces directly to an architectural decision. `au
 - The destructive action 6-step flow is mandatory — no shortcuts
 
 **First Implementation Priority (in order):**
-1. `npx create-next-app@latest aria-frontend --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-turbopack`
+1. `npx create-next-app@latest aria-frontend --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"`
 2. `pip install google-adk && adk new aria-backend`
 3. Firebase project setup + `firestore.rules` + Anonymous Auth
 4. GCP project setup + GCS bucket + Secret Manager secrets
