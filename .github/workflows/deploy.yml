@@ -126,4 +126,4 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
         run: |
-          npx --yes firebase-tools@13.35.1 deploy --only hosting --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
+          npx --yes firebase-tools@13.35.1 deploy --only hosting --project "${{ secrets.GCP_PROJECT }}" --non-interactive
