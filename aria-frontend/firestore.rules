@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Sessions collection: only the owning uid can read or write
+    match /sessions/{sessionId} {
+      // Read: authenticated user who owns this session
+      allow read: if request.auth != null
+                   && request.auth.uid == resource.data.uid;
+
+      // Create: authenticated user, must set their own uid as the owner
+      allow create: if request.auth != null
+                     && request.resource.data.uid == request.auth.uid;
+
+      // Update: only the session owner — backend uses Admin SDK (bypasses rules)
+      allow update: if request.auth != null
+                     && request.auth.uid == resource.data.uid;
+
+      // Delete: not permitted from client
+      allow delete: if false;
+    }
+
+    // Deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
