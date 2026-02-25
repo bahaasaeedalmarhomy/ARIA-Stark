@@ -110,7 +110,11 @@ jobs:
 
       - name: Verify static export
         working-directory: aria-frontend
-        run: test -f out/index.html || (echo "ERROR: out/index.html not found — static export failed" && exit 1)
+        run: |
+          if [ ! -f out/index.html ]; then
+            echo "ERROR: out/index.html not found - static export failed"
+            exit 1
+          fi
 
       - name: Decode GCP service account key
         id: gcp-sa
