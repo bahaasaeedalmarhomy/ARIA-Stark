@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "gemini-hackathon-488421-eff7f-29939",
     "public": "out",
     "cleanUrls": true,
     "trailingSlash": false,
