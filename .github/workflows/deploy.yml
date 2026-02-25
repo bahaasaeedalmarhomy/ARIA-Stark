@@ -117,9 +117,29 @@ jobs:
           fi
 
       - name: Decode GCP service account key
+        id: gcp-sa
         shell: bash
         run: |
           echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > "${{ runner.temp }}/gcp-sa.json"
+          {
+            echo "json<<EOF"
+            cat "${{ runner.temp }}/gcp-sa.json"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ steps.gcp-sa.outputs.json }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Enable required Google APIs
+        run: |
+          gcloud services enable cloudresourcemanager.googleapis.com firebasehosting.googleapis.com \
+            --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --quiet
 
       - name: Ensure Firebase Hosting site exists
         working-directory: aria-frontend

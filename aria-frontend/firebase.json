@@ -3,6 +3,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "gemini-hackathon-488421",
     "public": "out",
     "cleanUrls": true,
     "trailingSlash": false,
