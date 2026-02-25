@@ -128,6 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           PROJECT_ID="${{ secrets.GCP_PROJECT }}"
+          SITE_ID="${{ secrets.FIREBASE_PROJECT_ID || secrets.GCP_PROJECT }}"
           SITES_JSON="$(mktemp)"
 
           npx --yes firebase-tools@13.35.1 hosting:sites:list --project "${PROJECT_ID}" --non-interactive --json > "${SITES_JSON}"
@@ -136,7 +137,7 @@ jobs:
             exit 0
           fi
 
-          npx --yes firebase-tools@13.35.1 hosting:sites:create "${PROJECT_ID}" --project "${PROJECT_ID}" --non-interactive
+          npx --yes firebase-tools@13.35.1 hosting:sites:create "${SITE_ID}" --project "${PROJECT_ID}" --non-interactive
 
           npx --yes firebase-tools@13.35.1 hosting:sites:list --project "${PROJECT_ID}" --non-interactive --json > "${SITES_JSON}"
           node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const sites=(j.result&&j.result.sites)||(j.sites)||[]; if(!sites.length){console.error('No Firebase Hosting sites detected after create'); process.exit(1)}" "${SITES_JSON}"
@@ -146,4 +147,5 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
         run: |
-          npx --yes firebase-tools@13.35.1 deploy --only hosting --project "${{ secrets.GCP_PROJECT }}" --non-interactive
+          SITE_ID="${{ secrets.FIREBASE_PROJECT_ID || secrets.GCP_PROJECT }}"
+          npx --yes firebase-tools@13.35.1 deploy --only hosting --project "${{ secrets.GCP_PROJECT }}" --site "${SITE_ID}" --non-interactive
