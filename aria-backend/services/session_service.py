@@ -57,3 +57,21 @@ async def get_session(session_id: str) -> dict:
     if doc.exists:
         return doc.to_dict()
     return {}
+
+
+async def update_session_status(session_id: str, status: str, extra_fields: dict | None = None) -> None:
+    """
+    Update the status (and any extra fields) on an existing Firestore session document.
+
+    Args:
+        session_id: The session document ID (e.g., "sess_<uuid>")
+        status: New status string (e.g., "planning", "plan_ready", "failed")
+        extra_fields: Optional dict of additional fields to merge (e.g., {"steps": [...]})
+    """
+    db = _get_db()
+    doc_ref = db.collection("sessions").document(session_id)
+    update_data = {"status": status}
+    if extra_fields:
+        update_data.update(extra_fields)
+    await doc_ref.update(update_data)
+

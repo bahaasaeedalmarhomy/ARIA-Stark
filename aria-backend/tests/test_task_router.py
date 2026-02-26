@@ -1,7 +1,7 @@
 """
 Unit tests for POST /api/task/start route.
 
-Firebase Admin SDK and Firestore are mocked via conftest.py and per-test patches.
+Firebase Admin SDK, Firestore, and Planner agent are mocked via conftest.py and per-test patches.
 Run with: cd aria-backend && pytest tests/test_task_router.py -v
 """
 import re
@@ -16,13 +16,40 @@ client = TestClient(app, raise_server_exceptions=False)
 
 
 # ---------------------------------------------------------------------------
-# Helper: build a mock session result
+# Helper: build mock session and planner results
 # ---------------------------------------------------------------------------
 
 _MOCK_SESSION = {
     "session_id": "sess_00000000-0000-0000-0000-000000000000",
     "stream_url": "/api/stream/sess_00000000-0000-0000-0000-000000000000",
 }
+
+_MOCK_STEP_PLAN = {
+    "task_summary": "Search for cats on Google",
+    "steps": [
+        {
+            "step_index": 0,
+            "description": "Navigate to Google",
+            "action": "navigate",
+            "target": "https://google.com",
+            "value": None,
+            "confidence": 0.98,
+            "is_destructive": False,
+            "requires_user_input": False,
+            "user_input_reason": None,
+        }
+    ],
+}
+
+
+def _mock_patches(mock_session=_MOCK_SESSION, mock_plan=_MOCK_STEP_PLAN):
+    """Return context manager tuple that mocks all external dependencies."""
+    return (
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "test-uid"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=mock_session),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch("routers.task_router.run_planner", new_callable=AsyncMock, return_value=mock_plan),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -75,19 +102,15 @@ def test_start_task_invalid_token():
 
 
 # ---------------------------------------------------------------------------
-# Test: valid token + valid body → 200 with session_id and stream_url
+# Test: valid token + valid body → 200 with session_id, stream_url, and step_plan
 # ---------------------------------------------------------------------------
 
 def test_start_task_valid_token_returns_200():
-    mock_decoded = {"uid": "test-uid-123"}
-
     with (
-        patch("routers.task_router.firebase_auth.verify_id_token", return_value=mock_decoded),
-        patch(
-            "routers.task_router.create_session",
-            new_callable=AsyncMock,
-            return_value=_MOCK_SESSION,
-        ),
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "test-uid-123"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=_MOCK_SESSION),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch("routers.task_router.run_planner", new_callable=AsyncMock, return_value=_MOCK_STEP_PLAN),
     ):
         response = client.post(
             "/api/task/start",
@@ -103,6 +126,8 @@ def test_start_task_valid_token_returns_200():
     assert "stream_url" in body["data"]
     assert body["data"]["session_id"].startswith("sess_")
     assert body["data"]["stream_url"] == f"/api/stream/{body['data']['session_id']}"
+    assert "step_plan" in body["data"]
+    assert body["data"]["step_plan"]["task_summary"] == "Search for cats on Google"
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +135,6 @@ def test_start_task_valid_token_returns_200():
 # ---------------------------------------------------------------------------
 
 def test_start_task_session_id_format():
-    mock_decoded = {"uid": "uid-abc"}
     session_id = "sess_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     mock_session = {
         "session_id": session_id,
@@ -118,12 +142,10 @@ def test_start_task_session_id_format():
     }
 
     with (
-        patch("routers.task_router.firebase_auth.verify_id_token", return_value=mock_decoded),
-        patch(
-            "routers.task_router.create_session",
-            new_callable=AsyncMock,
-            return_value=mock_session,
-        ),
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "uid-abc"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=mock_session),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch("routers.task_router.run_planner", new_callable=AsyncMock, return_value=_MOCK_STEP_PLAN),
     ):
         response = client.post(
             "/api/task/start",
@@ -142,15 +164,11 @@ def test_start_task_session_id_format():
 # ---------------------------------------------------------------------------
 
 def test_start_task_response_envelope_shape():
-    mock_decoded = {"uid": "uid-xyz"}
-
     with (
-        patch("routers.task_router.firebase_auth.verify_id_token", return_value=mock_decoded),
-        patch(
-            "routers.task_router.create_session",
-            new_callable=AsyncMock,
-            return_value=_MOCK_SESSION,
-        ),
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "uid-xyz"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=_MOCK_SESSION),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch("routers.task_router.run_planner", new_callable=AsyncMock, return_value=_MOCK_STEP_PLAN),
     ):
         response = client.post(
             "/api/task/start",
@@ -186,10 +204,8 @@ def test_start_task_empty_description_returns_422():
 # ---------------------------------------------------------------------------
 
 def test_start_task_firestore_failure_returns_500():
-    mock_decoded = {"uid": "uid-fail"}
-
     with (
-        patch("routers.task_router.firebase_auth.verify_id_token", return_value=mock_decoded),
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "uid-fail"}),
         patch(
             "routers.task_router.create_session",
             new_callable=AsyncMock,
@@ -208,3 +224,54 @@ def test_start_task_firestore_failure_returns_500():
     assert body["data"] is None
     assert body["error"]["code"] == "INTERNAL_ERROR"
 
+
+# ---------------------------------------------------------------------------
+# Test: Planner failure → 500 with PLANNER_ERROR code
+# ---------------------------------------------------------------------------
+
+def test_start_task_planner_failure_returns_500():
+    with (
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "uid-plan-fail"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=_MOCK_SESSION),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch(
+            "routers.task_router.run_planner",
+            new_callable=AsyncMock,
+            side_effect=Exception("Planner API error"),
+        ),
+    ):
+        response = client.post(
+            "/api/task/start",
+            json={"task_description": "Test task"},
+            headers={"Authorization": "Bearer valid.token"},
+        )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["success"] is False
+    assert body["data"] is None
+    assert body["error"]["code"] == "PLANNER_ERROR"
+
+
+# ---------------------------------------------------------------------------
+# Test: optional context field is accepted (AC4)
+# ---------------------------------------------------------------------------
+
+def test_start_task_accepts_optional_context():
+    with (
+        patch("routers.task_router.firebase_auth.verify_id_token", return_value={"uid": "uid-ctx"}),
+        patch("routers.task_router.create_session", new_callable=AsyncMock, return_value=_MOCK_SESSION),
+        patch("routers.task_router.update_session_status", new_callable=AsyncMock),
+        patch("routers.task_router.run_planner", new_callable=AsyncMock, return_value=_MOCK_STEP_PLAN) as mock_run_planner,
+    ):
+        response = client.post(
+            "/api/task/start",
+            json={"task_description": "Buy product", "context": "product_url: https://example.com/product"},
+            headers={"Authorization": "Bearer valid.token"},
+        )
+
+    assert response.status_code == 200
+    # Verify context was passed through to run_planner
+    mock_run_planner.assert_called_once()
+    call_kwargs = mock_run_planner.call_args
+    assert call_kwargs.kwargs.get("context") == "product_url: https://example.com/product"

@@ -47,14 +47,14 @@ development_status:
   # all running on Cloud Run + Firebase Hosting with CI/CD green.
   # FRs: FR2, FR4, FR38, FR39, FR40 (scaffolded)
   # ─────────────────────────────────────────────────────────────────
-  epic-1: in-progress
+  epic-1: done
   1-1-backend-scaffold-with-playwright-docker-image: done
   1-2-frontend-scaffold-with-dark-theme-and-design-tokens: done
   1-3-gcp-and-firebase-infrastructure-provisioning: done
   1-4-firebase-anonymous-auth-and-session-start-api: done
   1-5-task-input-ui-and-session-start-flow: done
   1-6-cicd-pipeline-with-cloud-run-and-firebase-hosting-deployment: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # ─────────────────────────────────────────────────────────────────
   # Epic 2: Planner Agent + Live Thinking Panel
@@ -63,8 +63,8 @@ development_status:
   # scores and stagger animation as steps stream in.
   # FRs: FR3, FR6, FR7, FR17, FR19, FR22
   # ─────────────────────────────────────────────────────────────────
-  epic-2: backlog
-  2-1-planner-agent-with-canonical-step-plan-output: backlog
+  epic-2: in-progress
+  2-1-planner-agent-with-canonical-step-plan-output: review
   2-2-sse-stream-endpoint-for-agent-events: backlog
   2-3-frontend-sse-consumer-and-thinking-panel-state: backlog
   2-4-thinkingpanel-stepitem-and-confidencebadge-components: backlog
