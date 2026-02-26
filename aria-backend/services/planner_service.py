@@ -56,6 +56,10 @@ def _validate_step_plan(plan: dict) -> None:
         if missing:
             raise ValueError(f"Step {i} missing required fields: {missing}")
 
+        # Validate step_index is an integer
+        if not isinstance(step["step_index"], int):
+            raise ValueError(f"Step {i} step_index must be an int, got {type(step['step_index']).__name__}")
+
         if step["action"] not in _VALID_ACTIONS:
             raise ValueError(
                 f"Step {i} has invalid action '{step['action']}'. "
@@ -68,13 +72,26 @@ def _validate_step_plan(plan: dict) -> None:
         if not (0.0 <= float(confidence) <= 1.0):
             raise ValueError(f"Step {i} confidence {confidence} is out of range [0.0, 1.0]")
 
+        # Validate boolean fields
+        if not isinstance(step["is_destructive"], bool):
+            raise ValueError(f"Step {i} is_destructive must be a bool, got {type(step['is_destructive']).__name__}")
+        if not isinstance(step["requires_user_input"], bool):
+            raise ValueError(f"Step {i} requires_user_input must be a bool, got {type(step['requires_user_input']).__name__}")
+
+
+# Cached genai client — reused across invocations to avoid connection churn
+_client: genai.Client | None = None
+
 
 def _get_genai_client() -> genai.Client:
-    """Return a configured google-genai client using Vertex AI Express key."""
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY environment variable is not set")
-    return genai.Client(vertexai=True, api_key=api_key)
+    """Return a cached google-genai client using Vertex AI Express key."""
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY environment variable is not set")
+        _client = genai.Client(vertexai=True, api_key=api_key)
+    return _client
 
 
 async def run_planner(
@@ -112,6 +129,9 @@ async def _call_planner_with_retry(user_prompt: str, max_retries: int = 2) -> di
     """
     Call the Planner model with retry logic (NFR15: max 2 retries, 1s backoff).
     Uses the direct genai.Client approach for Vertex AI Express key compatibility.
+
+    Only API/network errors are retried. Schema validation errors (ValueError)
+    are raised immediately — retrying a deterministic model won't fix bad output.
     """
     last_exc: Optional[Exception] = None
 
@@ -125,10 +145,14 @@ async def _call_planner_with_retry(user_prompt: str, max_retries: int = 2) -> di
             except json.JSONDecodeError as e:
                 raise ValueError(f"Planner returned non-JSON response: {e}\nResponse: {result_text[:500]}")
 
-            # Validate against canonical schema
+            # Validate against canonical schema — ValueError propagates immediately
             _validate_step_plan(plan)
 
             return plan
+
+        except ValueError:
+            # Schema / parse errors — retrying won't help
+            raise
 
         except Exception as e:
             last_exc = e
@@ -169,5 +193,4 @@ async def _invoke_planner(user_prompt: str) -> str:
         )
         return response.text
 
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _sync_call)
+    return await asyncio.to_thread(_sync_call)

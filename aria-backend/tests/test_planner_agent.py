@@ -141,10 +141,7 @@ async def test_run_planner_valid_task_returns_canonical_schema():
     for step in result["steps"]:
         required = {"step_index", "description", "action", "target", "value",
                     "confidence", "is_destructive", "requires_user_input", "user_input_reason"}
-        assert required == set(step.keys()) | (required - set(step.keys())) - (required - set(step.keys()))
-        # Simplified: ensure all required fields are present
-        for field in required:
-            assert field in step, f"Missing field: {field}"
+        assert required.issubset(set(step.keys())), f"Missing fields: {required - set(step.keys())}"
 
 
 # ---------------------------------------------------------------------------
@@ -293,3 +290,25 @@ async def test_run_planner_schema_violation_raises():
     with patch("services.planner_service._invoke_planner", new=return_invalid):
         with pytest.raises(ValueError):
             await run_planner("Task")
+
+
+# ---------------------------------------------------------------------------
+# Test: Schema validation errors (ValueError) are NOT retried (M3 fix)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_run_planner_schema_error_not_retried():
+    """ValueError from schema validation should propagate immediately, not be retried."""
+    call_count = 0
+    invalid_plan = {"task_summary": "Task", "steps": [{"step_index": 0}]}  # Missing required fields
+
+    async def return_invalid(prompt: str) -> str:
+        nonlocal call_count
+        call_count += 1
+        return json.dumps(invalid_plan)
+
+    with patch("services.planner_service._invoke_planner", new=return_invalid):
+        with pytest.raises(ValueError):
+            await run_planner("Task")
+
+    assert call_count == 1, f"Expected exactly 1 call (no retries for ValueError), got {call_count}"

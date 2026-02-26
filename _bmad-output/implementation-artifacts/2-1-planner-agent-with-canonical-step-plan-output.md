@@ -1,6 +1,6 @@
 # Story 2.1: Planner Agent with Canonical Step Plan Output
 
-Status: review
+Status: done
 
 ## Story
 
@@ -302,7 +302,7 @@ All Epic 1 work is committed and deployed. CI/CD pipeline is green.
 
 ### Agent Model Used
 
-Gemini 2.5 Pro (Antigravity)
+Claude Sonnet 4.6 (Antigravity)
 
 ### Debug Log References
 
@@ -328,10 +328,29 @@ Gemini 2.5 Pro (Antigravity)
 - `aria-backend/services/planner_service.py` — created (run_planner, schema validation, retry)
 - `aria-backend/services/session_service.py` — modified (update_session_status added)
 - `aria-backend/routers/task_router.py` — modified (context field, planner wiring, status flow)
-- `aria-backend/tests/test_planner_agent.py` — created (14 unit tests)
-- `aria-backend/tests/test_task_router.py` — modified (mocks for run_planner + update_session_status, new tests)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (2-1 status → review)
+- `aria-backend/tests/test_planner_agent.py` — created (15 unit tests)
+- `aria-backend/tests/test_task_router.py` — modified (mocks for run_planner + update_session_status, 10 tests)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (2-1 status → done)
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Bahaa (Antigravity) on 2026-02-26
+**Outcome:** ✅ Approved (all HIGH/MEDIUM issues fixed)
+
+**Issues Found:** 3 HIGH, 3 MEDIUM, 2 LOW — **all fixed**
+
+| ID | Severity | Issue | Fix |
+|---|---|---|---|
+| H1 | HIGH | `asyncio.get_event_loop()` deprecated in 3.12+ | Replaced with `asyncio.to_thread()` |
+| H2 | HIGH | `_validate_step_plan()` missing bool/int type checks | Added `is_destructive`, `requires_user_input`, `step_index` type validation |
+| H3 | HIGH | `genai.Client()` created per-call (connection churn) | Cached via module-level `_client` singleton |
+| M1 | MEDIUM | No-op assertion in test (always True) | Replaced with `required.issubset()` |
+| M2 | MEDIUM | Firestore update failures silently swallowed | Added `warnings` field to response data |
+| M3 | MEDIUM | Retry logic retries `ValueError` schema errors | Separated `ValueError` (immediate raise) from API errors (retried) |
+| L1 | LOW | Git commit included undocumented files | Updated File List |
+| L2 | LOW | Unused `import os` in `planner_agent.py` | Removed dead import |
 
 ### Change Log
 
 - 2026-02-26: Implemented Story 2.1 — Planner Agent with Canonical Step Plan Output. 8 files modified/created, 29 tests passing (14 new). All ACs satisfied.
+- 2026-02-26: Code review — 8 issues found (3H, 3M, 2L), all fixed. 25 tests passing (15 planner + 10 router). Story status → done.

@@ -5,8 +5,6 @@ Uses google-adk LlmAgent with Gemini model configured for Vertex AI Express.
 The ADK runner auto-picks up env var GOOGLE_GENAI_USE_VERTEXAI=true.
 If ADK auto-config fails with 401, the planner_service.py fallback calls genai.Client directly.
 """
-import os
-
 from google.adk.agents import LlmAgent
 from google.genai import types as genai_types
 

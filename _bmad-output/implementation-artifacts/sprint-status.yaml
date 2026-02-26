@@ -64,7 +64,7 @@ development_status:
   # FRs: FR3, FR6, FR7, FR17, FR19, FR22
   # ─────────────────────────────────────────────────────────────────
   epic-2: in-progress
-  2-1-planner-agent-with-canonical-step-plan-output: review
+  2-1-planner-agent-with-canonical-step-plan-output: done
   2-2-sse-stream-endpoint-for-agent-events: backlog
   2-3-frontend-sse-consumer-and-thinking-panel-state: backlog
   2-4-thinkingpanel-stepitem-and-confidencebadge-components: backlog

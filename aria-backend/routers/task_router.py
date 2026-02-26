@@ -65,12 +65,14 @@ async def start_task(request: Request, body: StartTaskRequest):
         return _error_response("INTERNAL_ERROR", "Session creation failed", 500)
 
     session_id = session_data["session_id"]
+    warnings = []
 
     # 4. Update session status to "planning" before invoking Planner
     try:
         await update_session_status(session_id, "planning")
     except Exception:
         logger.warning("Failed to update session %s status to 'planning' — continuing", session_id)
+        warnings.append("Session status update to 'planning' failed — Firestore may be stale")
 
     # 5. Invoke Planner agent
     try:
@@ -95,16 +97,21 @@ async def start_task(request: Request, body: StartTaskRequest):
         )
     except Exception:
         logger.warning("Failed to update session %s with step plan — returning plan anyway", session_id)
+        warnings.append("Step plan storage in Firestore failed — plan returned but session may be incomplete")
 
     # 7. Return canonical success envelope with session data + step plan
+    response_data = {
+        **session_data,
+        "step_plan": step_plan,
+    }
+    if warnings:
+        response_data["warnings"] = warnings
+
     return JSONResponse(
         status_code=200,
         content={
             "success": True,
-            "data": {
-                **session_data,
-                "step_plan": step_plan,
-            },
+            "data": response_data,
             "error": None,
         },
     )
