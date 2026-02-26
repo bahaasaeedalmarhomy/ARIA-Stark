@@ -80,6 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+
 
     steps:
       - name: Checkout code
@@ -116,14 +118,11 @@ jobs:
             exit 1
           fi
 
-      - name: Decode GCP service account key
-        shell: bash
-        run: |
-          echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > "${{ runner.temp }}/gcp-sa.json"
-
       - name: Deploy to Firebase Hosting
-        working-directory: aria-frontend
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
-        run: |
-          npx --yes firebase-tools@13.35.1 deploy --only hosting --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
+          projectId: ${{ secrets.GCP_PROJECT }}
+          channelId: live
+          entryPoint: aria-frontend
