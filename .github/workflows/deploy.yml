@@ -123,6 +123,6 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SA_KEY_JSON }}
-          projectId: ${{ secrets.GCP_PROJECT }}
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: live
           entryPoint: aria-frontend
