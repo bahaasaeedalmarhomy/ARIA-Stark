@@ -63,7 +63,7 @@ development_status:
   # scores and stagger animation as steps stream in.
   # FRs: FR3, FR6, FR7, FR17, FR19, FR22
   # ─────────────────────────────────────────────────────────────────
-  epic-2: in-progress
+  epic-2: done
   2-1-planner-agent-with-canonical-step-plan-output: done
   2-2-sse-stream-endpoint-for-agent-events: done
   2-3-frontend-sse-consumer-and-thinking-panel-state: done
