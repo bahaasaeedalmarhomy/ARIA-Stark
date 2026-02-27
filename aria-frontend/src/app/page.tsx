@@ -3,6 +3,7 @@
 import { TaskConfirmedBanner } from "@/components/session/TaskConfirmedBanner";
 import { TaskInput } from "@/components/session/TaskInput";
 import { useSSEConsumer } from "@/lib/hooks/useSSEConsumer";
+import ThinkingPanel from "@/components/thinking-panel/ThinkingPanel";
 
 export default function Home() {
   useSSEConsumer();
@@ -23,8 +24,7 @@ export default function Home() {
 
       {/* Right: Thinking Panel — fixed 400px */}
       <aside className="w-[400px] shrink-0 border-l border-zinc-800 flex flex-col bg-surface">
-        {/* Placeholder — ThinkingPanel goes here in Story 2.4 */}
-        <p className="p-4 text-zinc-500 text-sm font-mono">Thinking panel</p>
+        <ThinkingPanel />
       </aside>
     </main>
   );
