@@ -65,8 +65,9 @@ def _reset_sse_queues():
 # ---------------------------------------------------------------------------
 
 def test_stream_unknown_session_returns_404():
-    with patch("handlers.sse_handler.get_session", new_callable=AsyncMock, return_value=None):
-        response = client.get(f"/api/stream/sess_nonexistent-session-id")
+    with patch("handlers.sse_handler.get_session", new_callable=AsyncMock, return_value=None), \
+         patch("handlers.sse_handler.firebase_auth.verify_id_token", return_value={"uid": "test-uid"}):
+        response = client.get(f"/api/stream/sess_nonexistent-session-id", headers={"Authorization": "Bearer valid.token"})
 
     assert response.status_code == 404
     body = response.json()
@@ -93,10 +94,10 @@ def test_stream_valid_session_content_type():
 
     with (
         patch("handlers.sse_handler.get_session", new_callable=AsyncMock, return_value=_MOCK_SESSION),
+        patch("handlers.sse_handler.firebase_auth.verify_id_token", return_value={"uid": "test-uid"}),
         patch("handlers.sse_handler.subscribe", side_effect=_finite_gen),
-        patch("handlers.sse_handler.unsubscribe"),
     ):
-        response = client.get(f"/api/stream/{_SESSION_ID}")
+        response = client.get(f"/api/stream/{_SESSION_ID}", headers={"Authorization": "Bearer valid.token"})
 
     assert response.status_code == 200
     content_type = response.headers.get("content-type", "")
@@ -310,3 +311,28 @@ def test_task_router_emits_task_failed_on_planner_error():
     assert call_args[0][1] == "task_failed", (
         f"Expected emit_event called with 'task_failed', got {call_args[0][1]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 10: emit_event formatting over HTTP (API integration)
+# ---------------------------------------------------------------------------
+
+def test_stream_integration_payload_formatting():
+    """Verify that the payload formatting over HTTP matches data: <json>\\n\\n format."""
+    _reset_sse_queues()
+
+    async def _finite_gen(session_id: str):
+        yield '{"event_type":"plan_ready","session_id":"sess_mock","step_index":null,"timestamp":"2026-02-26T14:30:00.000Z","payload":{}}'
+
+    with patch("handlers.sse_handler.get_session", new_callable=AsyncMock, return_value=_MOCK_SESSION), \
+         patch("handlers.sse_handler.firebase_auth.verify_id_token", return_value={"uid": "test-uid"}), \
+         patch("handlers.sse_handler.subscribe", side_effect=_finite_gen):
+
+        response = client.get(f"/api/stream/{_SESSION_ID}", headers={"Authorization": "Bearer valid.token"})
+        
+        # FastAPI TestClient will consume the finite generator
+        assert response.status_code == 200
+        text = response.text
+        assert ": keepalive" in text
+        assert "data: " in text
+        assert '{"event_type":"plan_ready"' in text

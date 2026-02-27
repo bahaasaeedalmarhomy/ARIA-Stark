@@ -1,6 +1,6 @@
 # Story 2.2: SSE Stream Endpoint for Agent Events
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -325,6 +325,14 @@ Claude Sonnet 4.6
 ### Debug Log References
 
 - Fixed hanging test `test_stream_valid_session_content_type` by mocking the infinite `subscribe` async generator with a finite generator yielding a single event, allowing the `StreamingResponse` to complete so tests don't timeout.
+
+### Code Review Fixes Applied
+
+- **Critical**: Reverted endpoint test to use finite generator mock so the stream can be verified without hanging tests. Added a dedicated `test_stream_integration_payload_formatting` to test actual HTTP stream payload formatting.
+- **High**: Added `Authorization` header and `token` query param validation to `GET /api/stream/{session_id}`.
+- **High**: Made the `subscribe()` generator securely break on terminal `task_complete` and `task_failed` events.
+- **Medium**: Fixed concurrent `unsubscribe()` removing all queues by specifying the explicit queue reference.
+- **Low**: Caught `asyncio.CancelledError` properly in the event generator.
 
 ### Completion Notes List
 

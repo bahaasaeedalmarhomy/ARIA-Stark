@@ -83,16 +83,32 @@ async def subscribe(session_id: str) -> AsyncGenerator[str, None]:
         while True:
             event = await queue.get()
             yield event
+            
+            # Identify terminal events to securely close the stream
+            try:
+                event_data = json.loads(event)
+                if event_data.get("event_type") in ("task_complete", "task_failed"):
+                    break
+            except Exception:
+                pass
     except asyncio.CancelledError:
         pass
+    finally:
+        unsubscribe(session_id, queue)
 
 
-def unsubscribe(session_id: str) -> None:
-    """Clean up all queues for a session on client disconnect.
-
-    For MVP (NFR17: single active session), removing all queues on disconnect
-    is correct. A reconnecting client will register a new queue via subscribe().
-    """
-    removed = _event_queues.pop(session_id, None)
-    if removed is not None:
-        logger.debug("SSE queues cleaned up for session %s (%d queues)", session_id, len(removed))
+def unsubscribe(session_id: str, queue: asyncio.Queue | None = None) -> None:
+    """Clean up queue(s) for a session on client disconnect."""
+    if queue is not None:
+        if session_id in _event_queues:
+            try:
+                _event_queues[session_id].remove(queue)
+            except ValueError:
+                pass
+            if not _event_queues[session_id]:
+                _event_queues.pop(session_id, None)
+                logger.debug("Last SSE queue removed for session %s", session_id)
+    else:
+        removed = _event_queues.pop(session_id, None)
+        if removed is not None:
+            logger.debug("SSE queues cleaned up for session %s (%d queues)", session_id, len(removed))

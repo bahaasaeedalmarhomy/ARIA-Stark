@@ -5,9 +5,11 @@ Validates that the session exists in Firestore, then opens a long-lived
 Server-Sent Events stream. Events are broadcast via the SSE event manager
 (services/sse_service.py) from other request handlers (e.g., task_router).
 """
+import asyncio
 import logging
 
-from fastapi import APIRouter
+import firebase_admin.auth as firebase_auth
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from services.session_service import get_session
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/api", tags=["stream"])
 
 
 @router.get("/stream/{session_id}")
-async def stream_events(session_id: str):
+async def stream_events(session_id: str, request: Request):
     """
     GET /api/stream/{session_id}
 
@@ -36,6 +38,26 @@ async def stream_events(session_id: str):
         Connection: keep-alive
         X-Accel-Buffering: no  (prevents nginx/proxy from buffering the stream)
     """
+    # Ensure Authentication via Authorization header or token query param
+    auth_header = request.headers.get("Authorization", "")
+    token = request.query_params.get("token")
+    
+    id_token = token if token else (auth_header.split("Bearer ", 1)[1].strip() if auth_header.startswith("Bearer ") else None)
+
+    if not id_token:
+        return JSONResponse(
+            status_code=401,
+            content={"success": False, "data": None, "error": {"code": "UNAUTHORIZED", "message": "Invalid or missing token"}},
+        )
+
+    try:
+        decoded = firebase_auth.verify_id_token(id_token)
+    except Exception:
+        return JSONResponse(
+            status_code=401,
+            content={"success": False, "data": None, "error": {"code": "UNAUTHORIZED", "message": "Invalid token"}},
+        )
+
     # Validate session exists before opening stream
     try:
         session = await get_session(session_id)
@@ -66,10 +88,11 @@ async def stream_events(session_id: str):
             yield ": keepalive\n\n"
             async for event in subscribe(session_id):
                 yield f"data: {event}\n\n"
+        except asyncio.CancelledError:
+            logger.debug("SSE client disconnected for session %s", session_id)
         except Exception:
             logger.exception("Error in SSE event generator for session %s", session_id)
         finally:
-            unsubscribe(session_id)
             logger.debug("SSE connection closed for session %s", session_id)
 
     return StreamingResponse(
