@@ -41,7 +41,6 @@ export function StepItem({ step }: StepItemProps) {
       data-testid="step-card"
       data-step-index={step.step_index}
       className={cardClasses}
-      role="listitem"
       aria-current={isActive ? "step" : undefined}
     >
       <div className="shrink-0 mt-0.5 text-xs text-text-secondary font-mono">

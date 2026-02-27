@@ -11,6 +11,10 @@
     from { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)); }
     to { height: 0; }
   }
+  @keyframes step-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 @custom-variant data-open {
@@ -189,6 +193,8 @@
   --color-text-primary: #FAFAFA;
   --color-text-secondary: #A1A1AA;
   --color-text-disabled: #52525B;
+
+  --animate-step-enter: step-enter 0.3s ease-out both;
 }
 
 /* ─── Global body reset for ARIA dark theme ──────────────────────────────── */
@@ -203,4 +209,11 @@ code,
 pre,
 .font-mono {
   font-family: var(--font-geist-mono), monospace;
+}
+
+/* ─── Accessibility: Respect reduced motion preference ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-enter {
+    animation: none !important;
+  }
 }

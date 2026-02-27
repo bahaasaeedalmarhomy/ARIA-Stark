@@ -68,7 +68,7 @@ development_status:
   2-2-sse-stream-endpoint-for-agent-events: done
   2-3-frontend-sse-consumer-and-thinking-panel-state: done
   2-4-thinkingpanel-stepitem-and-confidencebadge-components: done
-  2-5-task-interpretation-display-and-stagger-animation: backlog
+  2-5-task-interpretation-display-and-stagger-animation: done
   epic-2-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────

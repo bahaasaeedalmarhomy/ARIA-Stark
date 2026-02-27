@@ -3,7 +3,7 @@
 import { TaskConfirmedBanner } from "@/components/session/TaskConfirmedBanner";
 import { TaskInput } from "@/components/session/TaskInput";
 import { useSSEConsumer } from "@/lib/hooks/useSSEConsumer";
-import ThinkingPanel from "@/components/thinking-panel/ThinkingPanel";
+import { ThinkingPanel } from "@/components/thinking-panel/ThinkingPanel";
 
 export default function Home() {
   useSSEConsumer();

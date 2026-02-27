@@ -8,20 +8,22 @@ import { useARIAStore } from "@/lib/store/aria-store";
 export function ThinkingPanel() {
   const steps = useARIAStore((state) => state.steps);
   const panelStatus = useARIAStore((state) => state.panelStatus);
+  const taskSummary = useARIAStore((state) => state.taskSummary);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const prevActiveIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     const activeStep = steps.find((s) => s.status === "active");
     if (!activeStep) return;
-    
-    // Find the step element within the panel
+
+    const activeIndex = activeStep.step_index;
+    if (prevActiveIndexRef.current === activeIndex) return;
+    prevActiveIndexRef.current = activeIndex;
+
     const el = viewportRef.current?.querySelector(
-      `[data-step-index="${activeStep.step_index}"]`
+      `[data-step-index="${activeIndex}"]`
     );
-    
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [steps]);
 
   const headerBase =
@@ -51,6 +53,14 @@ export function ThinkingPanel() {
 
       <div ref={viewportRef} className="flex-1">
         <ScrollArea className="flex-1 px-4 py-3">
+          {taskSummary && (
+            <div id="task-summary" className="mb-3 pb-3 border-b border-border-aria">
+              <p className="text-xs text-text-secondary leading-relaxed">
+                <span className="font-medium text-text-primary">Task understood:</span>{" "}
+                {taskSummary}
+              </p>
+            </div>
+          )}
           {steps.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               {panelStatus === "planning" ? (
@@ -64,9 +74,18 @@ export function ThinkingPanel() {
               ) : null}
             </div>
           ) : (
-            <ul className="flex flex-col gap-2" role="list" aria-label="Step plan">
+            <ul
+              className="flex flex-col gap-2"
+              role="list"
+              aria-label="Step plan"
+              aria-describedby={taskSummary ? "task-summary" : undefined}
+            >
               {steps.map((step) => (
-                <li key={step.step_index}>
+                <li
+                  key={step.step_index}
+                  className="animate-step-enter"
+                  style={{ animationDelay: `${step.step_index * 60}ms` }}
+                >
                   <StepItem step={step} />
                 </li>
               ))}
@@ -77,5 +96,3 @@ export function ThinkingPanel() {
     </div>
   );
 }
-
-export default ThinkingPanel;
