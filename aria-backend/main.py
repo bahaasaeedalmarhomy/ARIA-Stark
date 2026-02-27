@@ -1,6 +1,12 @@
 import logging
 import os
+import sys
+import asyncio
 from contextlib import asynccontextmanager
+
+# Windows-specific fix for Playwright/asyncio subprocesses
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 import firebase_admin
 from dotenv import load_dotenv

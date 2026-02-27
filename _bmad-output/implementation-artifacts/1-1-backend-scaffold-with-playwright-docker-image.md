@@ -84,6 +84,11 @@ so that the backend can be built, containerized, and deployed to Cloud Run from 
 - [x] Task 8: Write stub test file (AC: 1)
   - [x] Create `aria-backend/tests/test_healthz.py` with a single test: `GET /healthz` returns 200
 
+- [x] Task 9: Create Windows Compatibility Runner
+  - [x] Create `aria-backend/run.py` to handle Windows-specific `ProactorEventLoop` requirements for Playwright + Uvicorn
+  - [x] Implements `asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())` on Windows
+  - [x] Disables Uvicorn auto-reload on Windows to prevent loop conflicts
+
 ## Dev Notes
 
 ### Critical Architecture Requirements
