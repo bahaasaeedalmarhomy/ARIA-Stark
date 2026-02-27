@@ -1,6 +1,6 @@
 # Story 2.3: Frontend SSE Consumer and Thinking Panel State
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,62 +23,62 @@ so that all thinking panel components react to live agent events without prop dr
 ## Tasks / Subtasks
 
 - [x] Task 1: Update `types/aria.ts` with ThinkingPanel and step types (AC: 2, 4)
-  - [ ] Add `StepStatus` type: `"pending" | "active" | "complete" | "error"`
-  - [ ] Add `ThinkingPanelStatus` type: `"idle" | "planning" | "plan_ready" | "executing" | "complete" | "failed"`
-  - [ ] Add `PlanStep` interface matching the canonical backend schema (see Dev Notes)
-  - [ ] Add `SSEConnectionStatus` type: `"disconnected" | "connecting" | "connected" | "reconnecting" | "error"`
-  - [ ] Update `StartTaskData` to include `step_plan?: { task_summary: string; steps: PlanStep[] }` (backend already returns this)
+  - [x] Add `StepStatus` type: `"pending" | "active" | "complete" | "error"`
+  - [x] Add `ThinkingPanelStatus` type: `"idle" | "planning" | "plan_ready" | "executing" | "complete" | "failed"`
+  - [x] Add `PlanStep` interface matching the canonical backend schema (see Dev Notes)
+  - [x] Add `SSEConnectionStatus` type: `"disconnected" | "connecting" | "connected" | "reconnecting" | "error"`
+  - [x] Update `StartTaskData` to include `step_plan?: { task_summary: string; steps: PlanStep[] }` (backend already returns this)
 
 - [x] Task 2: Update `lib/store/aria-store.ts` with proper ThinkingPanelSlice types (AC: 2, 4, 5)
-  - [ ] Replace `steps: SSEEvent[]` with `steps: PlanStep[]` in `ThinkingPanelSlice`
-  - [ ] Add `panelStatus: ThinkingPanelStatus` to `ThinkingPanelSlice`
-  - [ ] Add `taskSummary: string` (already exists — verify it's kept)
-  - [ ] Add `errorMessage: string | null` to `ThinkingPanelSlice` for `task_failed` events
-  - [ ] Add `connectionStatus: SSEConnectionStatus` to `ThinkingPanelSlice`
-  - [ ] Update initial state to match new field types
-  - [ ] Export a `resetAllSlices()` action helper that returns the full initial state object (for use in new-session reset — AC5)
+  - [x] Replace `steps: SSEEvent[]` with `steps: PlanStep[]` in `ThinkingPanelSlice`
+  - [x] Add `panelStatus: ThinkingPanelStatus` to `ThinkingPanelSlice`
+  - [x] Add `taskSummary: string` (already exists — verify it's kept)
+  - [x] Add `errorMessage: string | null` to `ThinkingPanelSlice` for `task_failed` events
+  - [x] Add `connectionStatus: SSEConnectionStatus` to `ThinkingPanelSlice`
+  - [x] Update initial state to match new field types
+  - [x] Export a `resetAllSlices()` action helper that returns the full initial state object (for use in new-session reset — AC5)
 
 - [x] Task 3: Create `lib/hooks/useSSEConsumer.ts` (AC: 1, 2, 3, 4)
-  - [ ] Export `useSSEConsumer()` hook — must be a React hook (use `useEffect` + `useRef`)
-  - [ ] Read `sessionId` and `taskStatus` from `useARIAStore`
-  - [ ] Open `EventSource` to `${NEXT_PUBLIC_BACKEND_URL}/api/stream/${sessionId}` when `sessionId` is non-null
-  - [ ] `onmessage` handler: parse `JSON.parse(event.data)` into `SSEEvent`; dispatch to store based on `event_type`
-  - [ ] Handle `plan_ready` event: call `useARIAStore.setState()` to set `steps`, `taskSummary`, `panelStatus: "plan_ready"`; map server steps to `PlanStep[]` with `status: "pending"` (idempotent — step plan is already hydrated from REST response; this is a safe overwrite)
-  - [ ] Handle `step_start` event: update the matching step's `status` to `"active"` in the steps array using `immer` draft mutation
-  - [ ] Handle `step_complete` event: update the matching step's `status` to `"complete"`
-  - [ ] Handle `step_error` event: update the matching step's `status` to `"error"`; set `errorMessage` on step if payload includes description
-  - [ ] Handle `task_complete` event: set `sessionSlice.taskStatus` to `"completed"`, `thinkingPanelSlice.panelStatus` to `"complete"`
-  - [ ] Handle `task_failed` event: set `sessionSlice.taskStatus` to `"failed"`, `thinkingPanelSlice.errorMessage` to `payload.error ?? "Task failed"` (AC4)
-  - [ ] Reconnect logic: on `onerror`, close the current EventSource, increment `reconnectAttemptsRef.current`, check if ≤5; if yes: schedule `setTimeout(reconnect, 1000 * attempt)` (1s × attempt number); if >5: set `connectionStatus: "error"` and surface error (AC3)
-  - [ ] On cleanup (effect teardown or `sessionId` becomes null): close EventSource, clear reconnect timeout, reset `reconnectAttemptsRef`
-  - [ ] Set `connectionStatus: "connecting"` on open attempt, `"connected"` on `EventSource` `onopen`, `"reconnecting"` during backoff
+  - [x] Export `useSSEConsumer()` hook — must be a React hook (use `useEffect` + `useRef`)
+  - [x] Read `sessionId` and `taskStatus` from `useARIAStore`
+  - [x] Open `EventSource` to `${NEXT_PUBLIC_BACKEND_URL}/api/stream/${sessionId}` when `sessionId` is non-null
+  - [x] `onmessage` handler: parse `JSON.parse(event.data)` into `SSEEvent`; dispatch to store based on `event_type`
+  - [x] Handle `plan_ready` event: call `useARIAStore.setState()` to set `steps`, `taskSummary`, `panelStatus: "plan_ready"`; map server steps to `PlanStep[]` with `status: "pending"` (idempotent — step plan is already hydrated from REST response; this is a safe overwrite)
+  - [x] Handle `step_start` event: update the matching step's `status` to `"active"` in the steps array using `immer` draft mutation
+  - [x] Handle `step_complete` event: update the matching step's `status` to `"complete"`
+  - [x] Handle `step_error` event: update the matching step's `status` to `"error"`; set `errorMessage` on step if payload includes description
+  - [x] Handle `task_complete` event: set `sessionSlice.taskStatus` to `"completed"`, `thinkingPanelSlice.panelStatus` to `"complete"`
+  - [x] Handle `task_failed` event: set `sessionSlice.taskStatus` to `"failed"`, `thinkingPanelSlice.errorMessage` to `payload.error ?? "Task failed"` (AC4)
+  - [x] Reconnect logic: on `onerror`, close the current EventSource, increment `reconnectAttemptsRef.current`, check if ≤5; if yes: schedule `setTimeout(reconnect, 1000 * attempt)` (1s × attempt number); if >5: set `connectionStatus: "error"` and surface error (AC3)
+  - [x] On cleanup (effect teardown or `sessionId` becomes null): close EventSource, clear reconnect timeout, reset `reconnectAttemptsRef`
+  - [x] Set `connectionStatus: "connecting"` on open attempt, `"connected"` on `EventSource` `onopen`, `"reconnecting"` during backoff
 
 - [x] Task 4: Hydrate ThinkingPanel from REST response in `TaskInput.tsx` (AC: 1, 2, 5)
-  - [ ] After successful `startTask()` response, reset all slices first: call `useARIAStore.setState(resetAllSlices())` before setting new session state (AC5)
-  - [ ] If `response.data.step_plan` is present on the response, immediately call `useARIAStore.setState()` to set `steps`, `taskSummary`, `panelStatus: "plan_ready"` — this hydrates the plan from the REST response, avoiding the SSE race condition (see Dev Notes)
-  - [ ] Set `taskStatus: "running"` rather than introducing a `"planning"` intermediate state (backend runs Planner synchronously; by the time response arrives, planning is complete)
-  - [ ] Update `StartTaskData` type import in `task.ts` to reflect new optional `step_plan` field
+  - [x] After successful `startTask()` response, reset all slices first: call `useARIAStore.setState(resetAllSlices())` before setting new session state (AC5)
+  - [x] If `response.data.step_plan` is present on the response, immediately call `useARIAStore.setState()` to set `steps`, `taskSummary`, `panelStatus: "plan_ready"` — this hydrates the plan from the REST response, avoiding the SSE race condition (see Dev Notes)
+  - [x] Set `taskStatus: "running"` rather than introducing a `"planning"` intermediate state (backend runs Planner synchronously; by the time response arrives, planning is complete)
+  - [x] Update `StartTaskData` type import in `task.ts` to reflect new optional `step_plan` field
 
 - [x] Task 5: Register `useSSEConsumer` in the app layout (AC: 1)
-  - [ ] Call `useSSEConsumer()` in `src/app/page.tsx` (or a dedicated `Providers` client component) so the hook runs at app root level
-  - [ ] Verify the hook is called inside a `"use client"` component
+  - [x] Call `useSSEConsumer()` in `src/app/page.tsx` (or a dedicated `Providers` client component) so the hook runs at app root level
+  - [x] Verify the hook is called inside a `"use client"` component
 
 - [x] Task 6: Write tests for `useSSEConsumer` (AC: 1, 2, 3, 4, 5)
-  - [ ] Create `src/lib/hooks/useSSEConsumer.test.ts` (co-located per architecture convention)
-  - [ ] Use `vitest` + `@testing-library/react` `renderHook` (already configured in the project)
-  - [ ] Mock `EventSource` globally in test setup — do NOT rely on real network connections
-  - [ ] Test: when `sessionId` is null → `EventSource` constructor is NOT called
-  - [ ] Test: when `sessionId` becomes non-null → `EventSource` opens to correct URL
-  - [ ] Test: `plan_ready` event → store `steps` populated, `panelStatus === "plan_ready"`, all steps `status: "pending"`
-  - [ ] Test: `step_start` event with `step_index: 1` → `steps[1].status === "active"`
-  - [ ] Test: `step_complete` event → matching step `status === "complete"`
-  - [ ] Test: `task_failed` event → `taskStatus === "failed"`, `errorMessage` set
-  - [ ] Test: `onerror` fires → EventSource is closed and reconnect is scheduled (confirm `connectionStatus === "reconnecting"`)
-  - [ ] Test: after 5 reconnect failures → `connectionStatus === "error"` and no further reconnects
-  - [ ] Test: hook cleanup → EventSource `close()` called when component unmounts
+  - [x] Create `src/lib/hooks/useSSEConsumer.test.ts` (co-located per architecture convention)
+  - [x] Use `vitest` + `@testing-library/react` `renderHook` (already configured in the project)
+  - [x] Mock `EventSource` globally in test setup — do NOT rely on real network connections
+  - [x] Test: when `sessionId` is null → `EventSource` constructor is NOT called
+  - [x] Test: when `sessionId` becomes non-null → `EventSource` opens to correct URL
+  - [x] Test: `plan_ready` event → store `steps` populated, `panelStatus === "plan_ready"`, all steps `status: "pending"`
+  - [x] Test: `step_start` event with `step_index: 1` → `steps[1].status === "active"`
+  - [x] Test: `step_complete` event → matching step `status === "complete"`
+  - [x] Test: `task_failed` event → `taskStatus === "failed"`, `errorMessage` set
+  - [x] Test: `onerror` fires → EventSource is closed and reconnect is scheduled (confirm `connectionStatus === "reconnecting"`)
+  - [x] Test: after 5 reconnect failures → `connectionStatus === "error"` and no further reconnects
+  - [x] Test: hook cleanup → EventSource `close()` called when component unmounts
 
-- [ ] Task 7: Git commit (all files)
-  - [ ] `git add -A && git commit -m "feat(story-2.3): implement frontend SSE consumer and thinking panel state"`
+- [x] Task 7: Git commit (all files)
+  - [x] `git add -A && git commit -m "feat(story-2.3): implement frontend SSE consumer and thinking panel state"`
 
 ## Dev Notes
 
@@ -477,10 +477,23 @@ Per architecture rules:
 
 ### Agent Model Used
 
-_{{agent_model_name_version}}_
+gemini-3.1-pro-preview
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented `ThinkingPanelSlice` in Zustand with proper types (`PlanStep`, `ThinkingPanelStatus`, `SSEConnectionStatus`).
+- Created `useSSEConsumer` hook for handling SSE events (`plan_ready`, `step_start`, `step_complete`, `step_error`, `task_complete`, `task_failed`) with reconnection logic.
+- Updated `TaskInput` to hydrate step plan from REST response.
+- Added unit tests for `useSSEConsumer` with mock `EventSource`.
+- Verified tests pass.
+
 ### File List
+
+- aria-frontend/src/types/aria.ts
+- aria-frontend/src/lib/store/aria-store.ts
+- aria-frontend/src/lib/hooks/useSSEConsumer.ts
+- aria-frontend/src/lib/hooks/useSSEConsumer.test.ts
+- aria-frontend/src/components/session/TaskInput.tsx
+- aria-frontend/src/app/page.tsx

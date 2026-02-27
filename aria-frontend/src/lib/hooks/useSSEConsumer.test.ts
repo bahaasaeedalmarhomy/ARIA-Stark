@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useSSEConsumer } from "./useSSEConsumer";
 import { useARIAStore, resetAllSlices } from "@/lib/store/aria-store";
+import type { PlanStep } from "@/types/aria";
 
 // Mock EventSource
 class MockEventSource {
@@ -19,6 +20,21 @@ class MockEventSource {
 }
 
 vi.stubGlobal("EventSource", MockEventSource);
+
+// Helper to create a partial step that satisfies PlanStep for testing
+const mockStep = (overrides: Partial<PlanStep>): PlanStep => ({
+  step_index: 1,
+  description: "Test Step",
+  action: "click",
+  target: null,
+  value: null,
+  confidence: 1.0,
+  is_destructive: false,
+  requires_user_input: false,
+  user_input_reason: null,
+  status: "pending",
+  ...overrides,
+});
 
 describe("useSSEConsumer", () => {
   beforeEach(() => {
@@ -95,7 +111,7 @@ describe("useSSEConsumer", () => {
   it("handles step_start event", () => {
     useARIAStore.setState({
       sessionId: "test-session",
-      steps: [{ step_index: 1, status: "pending" } as any],
+      steps: [mockStep({ step_index: 1, status: "pending" })],
     });
     renderHook(() => useSSEConsumer());
 
@@ -117,7 +133,7 @@ describe("useSSEConsumer", () => {
   it("handles step_complete event", () => {
     useARIAStore.setState({
       sessionId: "test-session",
-      steps: [{ step_index: 1, status: "active" } as any],
+      steps: [mockStep({ step_index: 1, status: "active" })],
     });
     renderHook(() => useSSEConsumer());
 
