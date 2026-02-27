@@ -11,41 +11,61 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { startTask } from "@/lib/api/task";
-import { useARIAStore } from "@/lib/store/aria-store";
+import { useARIAStore, resetAllSlices } from "@/lib/store/aria-store";
+import type { StepStatus } from "@/types/aria";
 
 export function TaskInput() {
-    const { idToken, taskStatus, isSessionStarting } = useARIAStore();
+  const { idToken, taskStatus, isSessionStarting } = useARIAStore();
 
-    const [taskDescription, setTaskDescription] = useState("");
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [confirmOpen, setConfirmOpen] = useState(false);
+  const [taskDescription, setTaskDescription] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-    const submitTask = async () => {
-        if (!idToken) return;
+  const submitTask = async () => {
+    if (!idToken) return;
 
-        setErrorMessage(null);
-        useARIAStore.setState({ isSessionStarting: true });
+    setErrorMessage(null);
+    useARIAStore.setState({ isSessionStarting: true });
 
-        try {
-            const response = await startTask(taskDescription, idToken);
+    try {
+      const response = await startTask(taskDescription, idToken);
 
-            if (response.success && response.data) {
-                useARIAStore.setState({
-                    sessionId: response.data.session_id,
-                    taskDescription,
-                    taskStatus: "running",
-                    isSessionStarting: false,
-                });
-                setTaskDescription("");
-            } else {
-                setErrorMessage(response.error?.message ?? "An unexpected error occurred");
-            }
-        } catch {
-            setErrorMessage("An unexpected error occurred. Please try again.");
-        } finally {
-            useARIAStore.setState({ isSessionStarting: false });
+      if (response.success && response.data) {
+        // Reset store first, preserving auth
+        useARIAStore.setState({
+          ...resetAllSlices(),
+          uid: useARIAStore.getState().uid,
+          idToken: useARIAStore.getState().idToken,
+        });
+
+        // Hydrate from REST response if available
+        if (response.data.step_plan) {
+          const { steps, task_summary } = response.data.step_plan;
+          useARIAStore.setState({
+            steps: steps.map((s) => ({ ...s, status: "pending" as StepStatus })),
+            taskSummary: task_summary,
+            panelStatus: "plan_ready",
+          });
         }
-    };
+
+        useARIAStore.setState({
+          sessionId: response.data.session_id,
+          taskDescription,
+          taskStatus: "running",
+          isSessionStarting: false,
+        });
+        setTaskDescription("");
+      } else {
+        setErrorMessage(
+          response.error?.message ?? "An unexpected error occurred"
+        );
+      }
+    } catch {
+      setErrorMessage("An unexpected error occurred. Please try again.");
+    } finally {
+      useARIAStore.setState({ isSessionStarting: false });
+    }
+  };
 
     const handleSubmit = async (event?: FormEvent) => {
         event?.preventDefault();

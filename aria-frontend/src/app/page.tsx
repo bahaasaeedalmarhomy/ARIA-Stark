@@ -2,8 +2,11 @@
 
 import { TaskConfirmedBanner } from "@/components/session/TaskConfirmedBanner";
 import { TaskInput } from "@/components/session/TaskInput";
+import { useSSEConsumer } from "@/lib/hooks/useSSEConsumer";
 
 export default function Home() {
+  useSSEConsumer();
+
   return (
     <main className="flex h-screen w-full min-w-0 bg-zinc-950 overflow-hidden">
       {/* Left: Browser Panel + Task Input */}
