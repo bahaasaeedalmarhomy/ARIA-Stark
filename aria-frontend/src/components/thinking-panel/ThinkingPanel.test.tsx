@@ -14,8 +14,12 @@ function setStore(state: { steps: unknown[]; panelStatus: string }) {
 }
 
 describe("ThinkingPanel", () => {
+  const scrollIntoViewMock = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    scrollIntoViewMock.mockClear();
+    Element.prototype.scrollIntoView = scrollIntoViewMock;
     setStore({ steps: [], panelStatus: "idle" });
   });
 
@@ -55,5 +59,23 @@ describe("ThinkingPanel", () => {
     setStore({ steps: [], panelStatus: "failed" });
     render(<ThinkingPanel />);
     expect(screen.getByText(/failed/i)).toBeTruthy();
+  });
+
+  it("scrolls active step into view", () => {
+    setStore({
+      steps: [
+        { step_index: 0, description: "Step A", status: "complete", confidence: 0.9 },
+        { step_index: 1, description: "Step B", status: "active", confidence: 0.8 },
+      ],
+      panelStatus: "executing",
+    });
+
+    render(<ThinkingPanel />);
+    
+    // The effect should run and call scrollIntoView on the active step element
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "nearest",
+    });
   });
 });

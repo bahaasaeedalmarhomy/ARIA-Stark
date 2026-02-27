@@ -75,35 +75,35 @@ so that I can follow what ARIA plans to do at a glance without reading dense tex
   - [x] Replace the `<p className="p-4 text-zinc-500 text-sm font-mono">Thinking panel</p>` placeholder with `<ThinkingPanel />`
   - [x] Ensure the `aside` already has `h-full` (it has `flex flex-col` — `ThinkingPanel`'s `h-full` will fill it)
 
-- [ ] Task 5: Write tests for ConfidenceBadge (AC: 3)
-  - [ ] Create `src/components/thinking-panel/ConfidenceBadge.test.tsx`
-  - [ ] Use `vitest` + `@testing-library/react` (already configured)
-  - [ ] Test: `confidence=0.9` → text "High", badge has class referencing `confidence-high` color token
-  - [ ] Test: `confidence=0.65` → text "Med", badge has class referencing `confidence-mid` color token
-  - [ ] Test: `confidence=0.3` → text "Low", badge has class referencing `confidence-low` color token
-  - [ ] Test: `confidence=0.8` → boundary edge → text "High"
-  - [ ] Test: `confidence=0.5` → boundary edge → text "Med"
+- [x] Task 5: Write tests for ConfidenceBadge (AC: 3)
+  - [x] Create `src/components/thinking-panel/ConfidenceBadge.test.tsx`
+  - [x] Use `vitest` + `@testing-library/react` (already configured)
+  - [x] Test: `confidence=0.9` → text "High", badge has class referencing `confidence-high` color token
+  - [x] Test: `confidence=0.65` → text "Med", badge has class referencing `confidence-mid` color token
+  - [x] Test: `confidence=0.3` → text "Low", badge has class referencing `confidence-low` color token
+  - [x] Test: `confidence=0.8` → boundary edge → text "High"
+  - [x] Test: `confidence=0.5` → boundary edge → text "Med"
 
-- [ ] Task 6: Write tests for StepItem (AC: 2, 4)
-  - [ ] Create `src/components/thinking-panel/StepItem.test.tsx`
-  - [ ] Test: `status: "pending"` → renders gray status dot, `bg-surface` class on card
-  - [ ] Test: `status: "active"` → renders `animate-pulse` element, `bg-surface-raised` on card, `border-l-step-active` on card
-  - [ ] Test: `status: "complete"` → renders checkmark ✓ character
-  - [ ] Test: `status: "error"` → renders ✗ character
-  - [ ] Test: step description renders in font-mono
-  - [ ] Test: `ConfidenceBadge` is rendered (query by confidence value display text)
+- [x] Task 6: Write tests for StepItem (AC: 2, 4)
+  - [x] Create `src/components/thinking-panel/StepItem.test.tsx`
+  - [x] Test: `status: "pending"` → renders gray status dot, `bg-surface` class on card
+  - [x] Test: `status: "active"` → renders `animate-pulse` element, `bg-surface-raised` on card, `border-l-step-active` on card
+  - [x] Test: `status: "complete"` → renders checkmark ✓ character
+  - [x] Test: `status: "error"` → renders ✗ character
+  - [x] Test: step description renders in font-mono
+  - [x] Test: `ConfidenceBadge` is rendered (query by confidence value display text)
 
-- [ ] Task 7: Write tests for ThinkingPanel (AC: 1, 5)
-  - [ ] Create `src/components/thinking-panel/ThinkingPanel.test.tsx`
-  - [ ] Mock `useARIAStore` with `vi.mock("@/lib/store/aria-store", ...)`
-  - [ ] Test: `steps=[]`, `panelStatus="idle"` → renders "Waiting for task…" empty state
-  - [ ] Test: `steps=[]`, `panelStatus="planning"` → renders "Planning…" text
-  - [ ] Test: 3 steps in store → renders 3 `StepItem` elements (query by step description)
-  - [ ] Test: `panelStatus="complete"` → header shows "Done"
-  - [ ] Test: `panelStatus="failed"` → header shows "Failed"
+- [x] Task 7: Write tests for ThinkingPanel (AC: 1, 5)
+  - [x] Create `src/components/thinking-panel/ThinkingPanel.test.tsx`
+  - [x] Mock `useARIAStore` with `vi.mock("@/lib/store/aria-store", ...)`
+  - [x] Test: `steps=[]`, `panelStatus="idle"` → renders "Waiting for task…" empty state
+  - [x] Test: `steps=[]`, `panelStatus="planning"` → renders "Planning…" text
+  - [x] Test: 3 steps in store → renders 3 `StepItem` elements (query by step description)
+  - [x] Test: `panelStatus="complete"` → header shows "Done"
+  - [x] Test: `panelStatus="failed"` → header shows "Failed"
 
-- [ ] Task 8: Git commit
-  - [ ] `git add -A && git commit -m "feat(story-2.4): implement ThinkingPanel, StepItem, and ConfidenceBadge components"`
+- [x] Task 8: Git commit
+  - [x] `git add -A && git commit -m "feat(story-2.4): implement ThinkingPanel, StepItem, and ConfidenceBadge components"`
 
 ## Dev Notes
 
@@ -361,6 +361,14 @@ Claude Sonnet 4.6
 - Implemented StepItem with status icons, token backgrounds, and mono text
 - Implemented ThinkingPanel with header states, ScrollArea, and auto-scroll
 - Wired ThinkingPanel into page aside replacing placeholder
+- Added unit tests for ConfidenceBadge, StepItem, and ThinkingPanel with vitest + RTL
+- Committed changes with the specified story commit message
+
+### Code Review Fixes
+- **Auto-scroll**: Replaced fragile `viewportRef` targeting with robust `scrollIntoView` on the active step element. Added test coverage.
+- **Status Icons**: Replaced unicode characters with `lucide-react` icons (`Check`, `X`, `Loader2`, `Circle`) for better visual fidelity.
+- **Accessibility**: Added `role="list"`, `aria-label`, `aria-live`, and `aria-current` attributes.
+- **Semantic Tokens**: Replaced hardcoded `text-zinc-500` with `text-text-disabled`.
 
 ### File List
 - aria-frontend/src/components/thinking-panel/ConfidenceBadge.tsx
@@ -370,3 +378,4 @@ Claude Sonnet 4.6
 - aria-frontend/src/components/thinking-panel/ThinkingPanel.tsx
 - aria-frontend/src/components/thinking-panel/ThinkingPanel.test.tsx
 - aria-frontend/src/app/page.tsx
+

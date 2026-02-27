@@ -1,6 +1,7 @@
 import React from "react";
 import type { PlanStep } from "@/types/aria";
 import { ConfidenceBadge } from "./ConfidenceBadge";
+import { Check, X, Loader2, Circle } from "lucide-react";
 
 type StepItemProps = {
   step: PlanStep;
@@ -16,22 +17,22 @@ export function StepItem({ step }: StepItemProps) {
       : "bg-surface");
 
   const descriptionClasses =
-    "font-mono " +
+    "font-mono text-sm " +
     (isActive ? "text-text-primary" : "text-text-secondary");
 
   let statusIcon: React.ReactNode = null;
   switch (step.status) {
     case "pending":
-      statusIcon = <span className="text-zinc-500">●</span>;
+      statusIcon = <Circle className="w-4 h-4 text-text-disabled fill-current" />;
       break;
     case "active":
-      statusIcon = <span className="animate-pulse text-step-active">●</span>;
+      statusIcon = <Loader2 className="w-4 h-4 animate-spin text-step-active" />;
       break;
     case "complete":
-      statusIcon = <span className="text-confidence-high">✓</span>;
+      statusIcon = <Check className="w-4 h-4 text-confidence-high" />;
       break;
     case "error":
-      statusIcon = <span className="text-confidence-low">✗</span>;
+      statusIcon = <X className="w-4 h-4 text-confidence-low" />;
       break;
   }
 
@@ -40,13 +41,17 @@ export function StepItem({ step }: StepItemProps) {
       data-testid="step-card"
       data-step-index={step.step_index}
       className={cardClasses}
+      role="listitem"
+      aria-current={isActive ? "step" : undefined}
     >
-      <div className="shrink-0 mt-0.5 text-xs text-text-secondary">
+      <div className="shrink-0 mt-0.5 text-xs text-text-secondary font-mono">
         {step.step_index + 1}
       </div>
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <span className={descriptionClasses}>{step.description}</span>
-        <span className="shrink-0">{statusIcon}</span>
+        <span className="shrink-0 flex items-center justify-center w-5 h-5">
+          {statusIcon}
+        </span>
         <ConfidenceBadge confidence={step.confidence} />
       </div>
     </div>

@@ -13,11 +13,14 @@ export function ThinkingPanel() {
   useEffect(() => {
     const activeStep = steps.find((s) => s.status === "active");
     if (!activeStep) return;
+    
+    // Find the step element within the panel
     const el = viewportRef.current?.querySelector(
       `[data-step-index="${activeStep.step_index}"]`
     );
-    if (el && typeof (el as HTMLElement).scrollIntoView === "function") {
-      (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "nearest" });
+    
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [steps]);
 
@@ -39,7 +42,7 @@ export function ThinkingPanel() {
 
   return (
     <div className="h-full w-full bg-surface flex flex-col">
-      <div className={headerClass}>
+      <div className={headerClass} role="status" aria-live="polite">
         <span>{headerLabel}</span>
         {panelStatus === "planning" && (
           <span className="animate-pulse text-text-secondary">●</span>
@@ -61,7 +64,7 @@ export function ThinkingPanel() {
               ) : null}
             </div>
           ) : (
-            <ul className="flex flex-col gap-2" role="list">
+            <ul className="flex flex-col gap-2" role="list" aria-label="Step plan">
               {steps.map((step) => (
                 <li key={step.step_index}>
                   <StepItem step={step} />

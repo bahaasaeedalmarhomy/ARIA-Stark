@@ -18,30 +18,37 @@ const mockStep = (overrides: Partial<PlanStep> = {}): PlanStep => ({
 });
 
 describe("StepItem", () => {
-  it('pending: renders gray dot and bg-surface', () => {
-    render(<StepItem step={mockStep({ status: "pending" })} />);
-    expect(screen.getByText("●")).toHaveClass("text-zinc-500");
+  it('pending: renders circle icon', () => {
+    const { container } = render(<StepItem step={mockStep({ status: "pending" })} />);
+    const icon = container.querySelector('.lucide-circle');
+    expect(icon).toBeTruthy();
+    expect(icon).toHaveClass("text-text-disabled");
     const card = screen.getByTestId("step-card");
     expect(card.className).toMatch(/bg-surface/);
   });
 
-  it('active: renders animate-pulse, bg-surface-raised, border-l-step-active', () => {
-    render(<StepItem step={mockStep({ status: "active" })} />);
-    const pulse = document.querySelector(".animate-pulse");
-    expect(pulse).not.toBeNull();
+  it('active: renders loader, bg-surface-raised, border-l-step-active', () => {
+    const { container } = render(<StepItem step={mockStep({ status: "active" })} />);
+    // Loader2 has animate-spin class
+    const loader = container.querySelector('.animate-spin');
+    expect(loader).toBeTruthy();
     const card = screen.getByTestId("step-card");
     expect(card.className).toMatch(/bg-surface-raised/);
     expect(card.className).toMatch(/border-l-step-active/);
   });
 
-  it('complete: renders checkmark ✓', () => {
-    render(<StepItem step={mockStep({ status: "complete" })} />);
-    expect(screen.getByText("✓")).toBeTruthy();
+  it('complete: renders check icon', () => {
+    const { container } = render(<StepItem step={mockStep({ status: "complete" })} />);
+    const icon = container.querySelector('.lucide-check');
+    expect(icon).toBeTruthy();
+    expect(icon).toHaveClass("text-confidence-high");
   });
 
-  it('error: renders ✗', () => {
-    render(<StepItem step={mockStep({ status: "error" })} />);
-    expect(screen.getByText("✗")).toBeTruthy();
+  it('error: renders x icon', () => {
+    const { container } = render(<StepItem step={mockStep({ status: "error" })} />);
+    const icon = container.querySelector('.lucide-x');
+    expect(icon).toBeTruthy();
+    expect(icon).toHaveClass("text-confidence-low");
   });
 
   it('renders description in font-mono', () => {
