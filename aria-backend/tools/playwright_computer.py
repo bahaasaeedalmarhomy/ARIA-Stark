@@ -1,4 +1,5 @@
 import asyncio
+import re
 from typing import Literal, Optional
 
 from google.adk.tools.computer_use.base_computer import BaseComputer, ComputerEnvironment, ComputerState
@@ -323,6 +324,29 @@ class PlaywrightComputer(BaseComputer):
         state = await self._state()
         self._check_cancel()
         return state
+
+    async def detect_captcha(self) -> bool:
+        """
+        Heuristic CAPTCHA detection — scans page HTML and title for known CAPTCHA signatures.
+
+        Checks for: reCAPTCHA, hCaptcha, Cloudflare Turnstile / Challenge, generic 'captcha'.
+        Returns True if any match found, False otherwise.
+        Non-fatal: returns False on any error so execution is never aborted by detection.
+        """
+        _CAPTCHA_PATTERN = re.compile(
+            r"captcha|recaptcha|hcaptcha|cf-challenge|challenge-form|turnstile",
+            re.IGNORECASE,
+        )
+        try:
+            html = await self.page.content()
+            if _CAPTCHA_PATTERN.search(html):
+                return True
+            title = await self.page.title()
+            if _CAPTCHA_PATTERN.search(title):
+                return True
+        except Exception:
+            return False
+        return False
 
     async def read_page(self, selector: Optional[str] = None) -> str:
         """

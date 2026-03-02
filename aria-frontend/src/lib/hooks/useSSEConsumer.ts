@@ -127,6 +127,7 @@ function handleSSEEvent(event: SSEEvent) {
       useARIAStore.setState({
         taskStatus: "completed",
         panelStatus: "complete",
+        awaitingInputMessage: null,
       });
       break;
     }
@@ -135,8 +136,17 @@ function handleSSEEvent(event: SSEEvent) {
       useARIAStore.setState({
         taskStatus: "failed",
         errorMessage: payload.error ?? "Task failed",
+        awaitingInputMessage: null,
       });
       break;
     }
-  }
-}
+    case "awaiting_input": {
+      const payload = event.payload as { reason?: string; message?: string };
+      useARIAStore.setState({
+        taskStatus: "awaiting_input",
+        awaitingInputMessage:
+          payload.message ?? "ARIA needs your input to continue",
+      });
+      break;
+    }
+  }}

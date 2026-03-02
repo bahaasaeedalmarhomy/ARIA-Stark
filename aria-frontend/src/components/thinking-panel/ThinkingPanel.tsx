@@ -3,12 +3,16 @@
 import React, { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepItem } from "./StepItem";
+import { InputRequestBanner } from "./InputRequestBanner";
 import { useARIAStore } from "@/lib/store/aria-store";
 
 export function ThinkingPanel() {
   const steps = useARIAStore((state) => state.steps);
   const panelStatus = useARIAStore((state) => state.panelStatus);
   const taskSummary = useARIAStore((state) => state.taskSummary);
+  const taskStatus = useARIAStore((state) => state.taskStatus);
+  const awaitingInputMessage = useARIAStore((state) => state.awaitingInputMessage);
+  const sessionId = useARIAStore((state) => state.sessionId);
   const viewportRef = useRef<HTMLDivElement>(null);
   const prevActiveIndexRef = useRef<number | null>(null);
 
@@ -90,8 +94,18 @@ export function ThinkingPanel() {
                 </li>
               ))}
             </ul>
-          )}
-        </ScrollArea>
+          )}          {taskStatus === "awaiting_input" && awaitingInputMessage && sessionId && (
+            <InputRequestBanner
+              message={awaitingInputMessage}
+              sessionId={sessionId}
+              onSubmitted={() =>
+                useARIAStore.setState({
+                  taskStatus: "running",
+                  awaitingInputMessage: null,
+                })
+              }
+            />
+          )}        </ScrollArea>
       </div>
     </div>
   );

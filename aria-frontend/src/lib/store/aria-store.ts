@@ -33,6 +33,7 @@ interface ThinkingPanelSlice {
   panelStatus: ThinkingPanelStatus;
   taskSummary: string;
   errorMessage: string | null;
+  awaitingInputMessage: string | null;
   connectionStatus: SSEConnectionStatus;
 }
 
@@ -55,6 +56,7 @@ export const ARIA_INITIAL_STATE = {
   panelStatus: "idle" as ThinkingPanelStatus,
   taskSummary: "",
   errorMessage: null,
+  awaitingInputMessage: null,
   connectionStatus: "disconnected" as SSEConnectionStatus,
 };
 

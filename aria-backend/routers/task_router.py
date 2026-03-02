@@ -11,10 +11,15 @@ from services.executor_service import run_executor
 from services.planner_service import run_planner
 from services.session_service import create_session, update_session_status
 from services.sse_service import emit_event
+from services.input_queue_service import has_input_queue, put_user_input
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/task")
+
+
+class UserInputRequest(BaseModel):
+    value: str = Field(..., min_length=1)
 
 
 class StartTaskRequest(BaseModel):
@@ -178,4 +183,25 @@ async def start_task(request: Request, body: StartTaskRequest):
             "data": response_data,
             "error": None,
         },
+    )
+
+
+@router.post("/{session_id}/input")
+async def submit_user_input(session_id: str, body: UserInputRequest):
+    """
+    POST /api/task/{session_id}/input
+
+    Delivers user-provided text input to a paused executor session.
+    No auth check — session_id acts as the implicit ownership token (UUID v4).
+    Same pattern as /interrupt.
+
+    Returns 404 if no active input queue exists for the session (executor not waiting).
+    """
+    if not has_input_queue(session_id):
+        return _error_response("SESSION_NOT_FOUND", f"No active input session: {session_id}", 404)
+
+    put_user_input(session_id, body.value)
+    return JSONResponse(
+        status_code=200,
+        content={"success": True, "data": {"queued": True}, "error": None},
     )

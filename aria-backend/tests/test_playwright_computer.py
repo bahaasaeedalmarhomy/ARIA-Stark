@@ -207,3 +207,66 @@ async def test_read_page_selector():
 
     pc.page.inner_text.assert_called_once_with("#main")
     assert "main content" in result
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Story 3.4 — detect_captcha (AC: 3)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_detect_captcha_true_when_recaptcha_in_page():
+    """detect_captcha returns True when page HTML contains reCAPTCHA signature (AC: 3)."""
+    pc = _make_pc()
+    pc.page.content = AsyncMock(return_value="<div class='g-recaptcha'></div>")
+    pc.page.title = AsyncMock(return_value="Checkout")
+
+    result = await pc.detect_captcha()
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_detect_captcha_true_when_hcaptcha_in_page():
+    """detect_captcha returns True when page HTML contains hCaptcha signature (AC: 3)."""
+    pc = _make_pc()
+    pc.page.content = AsyncMock(return_value="<div class='h-captcha' data-sitekey='key'></div>")
+    pc.page.title = AsyncMock(return_value="Login")
+
+    result = await pc.detect_captcha()
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_detect_captcha_true_when_captcha_in_title():
+    """detect_captcha returns True when page title contains 'captcha' (AC: 3)."""
+    pc = _make_pc()
+    pc.page.content = AsyncMock(return_value="<html><body>Normal page</body></html>")
+    pc.page.title = AsyncMock(return_value="Just a CAPTCHA challenge")
+
+    result = await pc.detect_captcha()
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_detect_captcha_false_when_normal_page():
+    """detect_captcha returns False when page has no CAPTCHA signatures (AC: 3)."""
+    pc = _make_pc()
+    pc.page.content = AsyncMock(return_value="<html><body><h1>Welcome</h1></body></html>")
+    pc.page.title = AsyncMock(return_value="Welcome — Shop")
+
+    result = await pc.detect_captcha()
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_detect_captcha_returns_false_on_exception():
+    """detect_captcha returns False (non-fatal) when page.content() raises (AC: 3)."""
+    pc = _make_pc()
+    pc.page.content = AsyncMock(side_effect=RuntimeError("page crash"))
+
+    result = await pc.detect_captcha()
+
+    assert result is False

@@ -172,6 +172,77 @@ describe("useSSEConsumer", () => {
 
     expect(useARIAStore.getState().taskStatus).toBe("failed");
     expect(useARIAStore.getState().errorMessage).toBe("Something went wrong");
+    expect(useARIAStore.getState().awaitingInputMessage).toBeNull();
+  });
+
+  it("handles awaiting_input event — sets taskStatus and awaitingInputMessage (Story 3.4 AC: 5)", () => {
+    useARIAStore.setState({ sessionId: "test-session" });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "awaiting_input",
+          session_id: "test-session",
+          step_index: 2,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: {
+            reason: "captcha_detected",
+            message: "CAPTCHA encountered — manual intervention required",
+          },
+        }),
+      } as MessageEvent);
+    });
+
+    expect(useARIAStore.getState().taskStatus).toBe("awaiting_input");
+    expect(useARIAStore.getState().awaitingInputMessage).toBe(
+      "CAPTCHA encountered — manual intervention required"
+    );
+  });
+
+  it("awaiting_input falls back to default message when payload.message is absent (Story 3.4 AC: 5)", () => {
+    useARIAStore.setState({ sessionId: "test-session" });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "awaiting_input",
+          session_id: "test-session",
+          step_index: 1,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: { reason: "step_error" },
+        }),
+      } as MessageEvent);
+    });
+
+    expect(useARIAStore.getState().taskStatus).toBe("awaiting_input");
+    expect(useARIAStore.getState().awaitingInputMessage).toBe(
+      "ARIA needs your input to continue"
+    );
+  });
+
+  it("task_complete resets awaitingInputMessage to null (Story 3.4 AC: 5)", () => {
+    useARIAStore.setState({
+      sessionId: "test-session",
+      taskStatus: "awaiting_input",
+      awaitingInputMessage: "CAPTCHA encountered",
+    });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "task_complete",
+          session_id: "test-session",
+          step_index: null,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: {},
+        }),
+      } as MessageEvent);
+    });
+
+    expect(useARIAStore.getState().awaitingInputMessage).toBeNull();
   });
 
   it("handles reconnection logic", () => {

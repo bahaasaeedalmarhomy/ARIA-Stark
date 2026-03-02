@@ -82,7 +82,7 @@ development_status:
   3-1-executor-agent-with-adk-sequentialagent-wiring: done
   3-2-playwright-browser-actions: done
   3-3-screenshot-capture-gcs-upload-and-step-sse-events: done
-  3-4-error-handling-page-load-timeouts-and-captcha-pause: backlog
+  3-4-error-handling-page-load-timeouts-and-captcha-pause: in-progress
   3-5-firestore-audit-log-writer-and-mid-task-input-request: backlog
   3-6-audit-log-viewer-ui-and-task-cancel: backlog
   epic-3-retrospective: optional
