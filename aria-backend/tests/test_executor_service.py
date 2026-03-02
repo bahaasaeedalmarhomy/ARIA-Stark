@@ -74,7 +74,7 @@ async def test_run_executor_success_calls_handle_task_complete():
         patch("services.executor_service.Runner") as MockRunner,
         patch("services.executor_service.emit_event") as mock_emit,
         patch("services.executor_service.build_executor_context", return_value="ctx"),
-        patch("routers.task_router.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock) as mock_htc,
     ):
         # Wire up the mock computer
         mock_pc = AsyncMock()
@@ -128,7 +128,8 @@ async def test_run_executor_barge_in_emits_task_paused_and_skips_handle_complete
         patch("services.executor_service.Runner") as MockRunner,
         patch("services.executor_service.emit_event") as mock_emit,
         patch("services.executor_service.build_executor_context", return_value="ctx"),
-        patch("routers.task_router.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.update_session_status", new_callable=AsyncMock) as mock_update_status,
     ):
         mock_pc = AsyncMock()
         mock_pc.screenshot = AsyncMock(return_value=b"\x89PNG")
@@ -153,6 +154,9 @@ async def test_run_executor_barge_in_emits_task_paused_and_skips_handle_complete
     # Must emit task_paused
     emit_types = [c.args[1] for c in mock_emit.call_args_list]
     assert "task_paused" in emit_types, f"Expected 'task_paused' in {emit_types}"
+
+    # Must update Firestore status to paused (H1 fix)
+    mock_update_status.assert_called_once_with(_SESSION_ID, "paused")
 
     # Must NOT call handle_task_complete
     mock_htc.assert_not_called()
@@ -189,7 +193,7 @@ async def test_run_executor_retry_succeeds_on_third_attempt():
         patch("services.executor_service.Runner") as MockRunner,
         patch("services.executor_service.emit_event") as mock_emit,
         patch("services.executor_service.build_executor_context", return_value="ctx"),
-        patch("routers.task_router.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock) as mock_htc,
         # Suppress retry sleep to keep tests fast
         patch("services.executor_service.asyncio.sleep", new_callable=AsyncMock),
     ):
@@ -243,7 +247,8 @@ async def test_run_executor_exhausted_retries_emits_step_error():
         patch("services.executor_service.Runner") as MockRunner,
         patch("services.executor_service.emit_event") as mock_emit,
         patch("services.executor_service.build_executor_context", return_value="ctx"),
-        patch("routers.task_router.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.update_session_status", new_callable=AsyncMock) as mock_update_status,
         patch("services.executor_service.asyncio.sleep", new_callable=AsyncMock),
     ):
         mock_pc = AsyncMock()
@@ -273,6 +278,9 @@ async def test_run_executor_exhausted_retries_emits_step_error():
     assert "error" in payload
     assert "description" in payload
 
+    # Must update Firestore status to error (H1 fix)
+    mock_update_status.assert_called_once_with(_SESSION_ID, "error")
+
     # handle_task_complete must NOT be called (executor stopped early)
     mock_htc.assert_not_called()
 
@@ -295,7 +303,8 @@ async def test_run_executor_pc_stop_called_in_finally():
         patch("services.executor_service.Runner") as MockRunner,
         patch("services.executor_service.emit_event"),
         patch("services.executor_service.build_executor_context", return_value="ctx"),
-        patch("routers.task_router.handle_task_complete", new_callable=AsyncMock),
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock),
+        patch("services.executor_service.update_session_status", new_callable=AsyncMock),
         patch("services.executor_service.asyncio.sleep", new_callable=AsyncMock),
     ):
         mock_pc = AsyncMock()

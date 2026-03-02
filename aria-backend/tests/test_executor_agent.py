@@ -209,11 +209,11 @@ async def test_navigate_propagates_barge_in_before_goto():
 @pytest.mark.asyncio
 async def test_handle_task_complete_updates_firestore_status():
     """handle_task_complete must call audit_update_session_status with 'complete' (AC: 4)."""
-    from routers.task_router import handle_task_complete
+    from services.task_complete_service import handle_task_complete
 
     with (
-        patch("routers.task_router.audit_update_session_status", new_callable=AsyncMock) as mock_audit,
-        patch("routers.task_router.emit_event") as mock_emit,
+        patch("services.task_complete_service.audit_update_session_status", new_callable=AsyncMock) as mock_audit,
+        patch("services.task_complete_service.emit_event") as mock_emit,
     ):
         await handle_task_complete("sess_test-123", 5)
 
@@ -223,11 +223,11 @@ async def test_handle_task_complete_updates_firestore_status():
 @pytest.mark.asyncio
 async def test_handle_task_complete_emits_sse_event():
     """handle_task_complete must emit task_complete SSE event with correct payload (AC: 4)."""
-    from routers.task_router import handle_task_complete
+    from services.task_complete_service import handle_task_complete
 
     with (
-        patch("routers.task_router.audit_update_session_status", new_callable=AsyncMock),
-        patch("routers.task_router.emit_event") as mock_emit,
+        patch("services.task_complete_service.audit_update_session_status", new_callable=AsyncMock),
+        patch("services.task_complete_service.emit_event") as mock_emit,
     ):
         await handle_task_complete("sess_test-456", 7)
 
@@ -244,15 +244,15 @@ async def test_handle_task_complete_emits_sse_event():
 @pytest.mark.asyncio
 async def test_handle_task_complete_survives_firestore_failure():
     """handle_task_complete must still emit SSE even if Firestore update fails (AC: 4)."""
-    from routers.task_router import handle_task_complete
+    from services.task_complete_service import handle_task_complete
 
     with (
         patch(
-            "routers.task_router.audit_update_session_status",
+            "services.task_complete_service.audit_update_session_status",
             new_callable=AsyncMock,
             side_effect=Exception("Firestore down"),
         ),
-        patch("routers.task_router.emit_event") as mock_emit,
+        patch("services.task_complete_service.emit_event") as mock_emit,
     ):
         await handle_task_complete("sess_fail-fs", 3)
 
@@ -263,11 +263,11 @@ async def test_handle_task_complete_survives_firestore_failure():
 @pytest.mark.asyncio
 async def test_handle_task_complete_survives_sse_failure():
     """handle_task_complete must not raise if SSE emit fails (AC: 4)."""
-    from routers.task_router import handle_task_complete
+    from services.task_complete_service import handle_task_complete
 
     with (
-        patch("routers.task_router.audit_update_session_status", new_callable=AsyncMock) as mock_audit,
-        patch("routers.task_router.emit_event", side_effect=Exception("SSE broken")),
+        patch("services.task_complete_service.audit_update_session_status", new_callable=AsyncMock) as mock_audit,
+        patch("services.task_complete_service.emit_event", side_effect=Exception("SSE broken")),
     ):
         # Should not raise
         await handle_task_complete("sess_fail-sse", 2)

@@ -1,6 +1,6 @@
 # Story 3.2: Playwright Browser Actions
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -69,7 +69,7 @@ So that it can perform any web task on my behalf.
   - [x] Use `AsyncMock` throughout; mock `PlaywrightComputer.start`, `PlaywrightComputer.stop`, `emit_event`, `handle_task_complete`, ADK Runner
 
 - [x] Task 5: Git commit
-  - [ ] `git add -A && git commit -m "feat(story-3.2): playwright browser actions executor service"`
+  - [x] `git add -A && git commit -m "feat(story-3.2): playwright browser actions executor service"`
 
 ## Dev Notes
 

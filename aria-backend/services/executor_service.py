@@ -22,7 +22,9 @@ from google.genai import types as genai_types
 
 from agents.executor_agent import build_executor_context
 from prompts.executor_system import EXECUTOR_SYSTEM_PROMPT
+from services.session_service import update_session_status
 from services.sse_service import emit_event
+from services.task_complete_service import handle_task_complete
 from tools.playwright_computer import BargeInException, PlaywrightComputer
 
 logger = logging.getLogger(__name__)
@@ -54,10 +56,6 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
         session_id: The active Firestore session ID (e.g. "sess_<uuid>").
         step_plan: Validated canonical step plan dict from the Planner.
     """
-    # Import here to avoid circular import at module level
-    # (task_router imports from session_service; executor_service is imported by task_router)
-    from routers.task_router import handle_task_complete
-
     pc = PlaywrightComputer(session_id=session_id)
     await pc.start()
 
@@ -93,21 +91,24 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             current_step_index = step.get("step_index", current_step_index)
             step_description = step.get("description", f"step {current_step_index}")
 
-            # Capture current browser state for context assembly
-            screenshot_bytes = await pc.screenshot()
-            screenshot_b64 = (
-                base64.b64encode(screenshot_bytes).decode() if screenshot_bytes else ""
-            )
-
-            context = build_executor_context(
-                step_plan,
-                completed_steps,
-                screenshot_b64,
-            )
-
             last_exc: Exception | None = None
             for attempt in range(_MAX_STEP_ATTEMPTS):
                 try:
+                    # Capture fresh browser state for each attempt (AC 6:
+                    # "re-takes a screenshot, re-evaluates the page state")
+                    screenshot_bytes = await pc.screenshot()
+                    screenshot_b64 = (
+                        base64.b64encode(screenshot_bytes).decode()
+                        if screenshot_bytes
+                        else ""
+                    )
+
+                    context = build_executor_context(
+                        step_plan,
+                        completed_steps,
+                        screenshot_b64,
+                    )
+
                     async for _event in runner.run_async(
                         user_id=session_id,
                         session_id=adk_session.id,
@@ -161,6 +162,10 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                         "description": step_description,
                     },
                 )
+                try:
+                    await update_session_status(session_id, "error")
+                except Exception:
+                    logger.warning("Failed to update session %s status to 'error'", session_id)
                 return
 
         # All steps completed successfully
@@ -178,6 +183,10 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             "task_paused",
             {"paused_at_step": current_step_index},
         )
+        try:
+            await update_session_status(session_id, "paused")
+        except Exception:
+            logger.warning("Failed to update session %s status to 'paused'", session_id)
 
     except Exception as e:
         logger.error(
@@ -190,9 +199,16 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             "task_failed",
             {"reason": str(e)},
         )
+        try:
+            await update_session_status(session_id, "failed")
+        except Exception:
+            logger.warning("Failed to update session %s status to 'failed'", session_id)
 
     finally:
         await pc.stop()  # ALWAYS clean up browser resources (AC: 6)
 
     if success:
-        await handle_task_complete(session_id, steps_completed=len(completed_steps))
+        try:
+            await handle_task_complete(session_id, steps_completed=len(completed_steps))
+        except Exception:
+            logger.error("handle_task_complete failed for session %s", session_id)

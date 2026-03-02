@@ -11,7 +11,6 @@ from services.executor_service import run_executor
 from services.planner_service import run_planner
 from services.session_service import create_session, update_session_status
 from services.sse_service import emit_event
-from handlers.audit_writer import update_session_status as audit_update_session_status
 
 logger = logging.getLogger(__name__)
 
@@ -29,38 +28,6 @@ def _error_response(code: str, message: str, status: int) -> JSONResponse:
         status_code=status,
         content={"success": False, "data": None, "error": {"code": code, "message": message}},
     )
-
-
-async def handle_task_complete(session_id: str, steps_completed: int) -> None:
-    """
-    Handle SequentialAgent task completion — AC: 4 (Story 3.1).
-
-    Called when the ADK SequentialAgent (planner + executor) finishes all sub-agents.
-    In Story 3.1 this function is defined; it will be wired to the ADK runner
-    completion callback in Story 3.2+ when the executor actually runs.
-
-    Emits the canonical `task_complete` SSE event and updates Firestore session status.
-
-    Args:
-        session_id: The active session ID.
-        steps_completed: Count of executor steps with results recorded in Firestore.
-    """
-    try:
-        await audit_update_session_status(session_id, "complete")
-    except Exception:
-        logger.warning("Failed to update Firestore status to 'complete' for session %s", session_id)
-
-    try:
-        emit_event(
-            session_id,
-            "task_complete",
-            {
-                "steps_completed": steps_completed,
-                "session_id": session_id,
-            },
-        )
-    except Exception:
-        logger.warning("Failed to emit task_complete SSE event for session %s", session_id)
 
 
 @router.post("/start")
