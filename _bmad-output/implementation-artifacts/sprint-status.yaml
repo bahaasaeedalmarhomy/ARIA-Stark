@@ -79,7 +79,7 @@ development_status:
   # FRs: FR5, FR8–FR16, FR18, FR20, FR21 (text), FR33–FR37, FR41, FR42
   # ─────────────────────────────────────────────────────────────────
   epic-3: in-progress
-  3-1-executor-agent-with-adk-sequentialagent-wiring: in-progress
+  3-1-executor-agent-with-adk-sequentialagent-wiring: review
   3-2-playwright-browser-actions: backlog
   3-3-screenshot-capture-gcs-upload-and-step-sse-events: backlog
   3-4-error-handling-page-load-timeouts-and-captcha-pause: backlog
