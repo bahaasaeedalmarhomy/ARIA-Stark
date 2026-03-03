@@ -198,6 +198,8 @@ describe("useSSEConsumer", () => {
     expect(useARIAStore.getState().awaitingInputMessage).toBe(
       "CAPTCHA encountered — manual intervention required"
     );
+    // panelStatus should also be set to "awaiting_input" (M3 fix)
+    expect(useARIAStore.getState().panelStatus).toBe("awaiting_input");
   });
 
   it("awaiting_input falls back to default message when payload.message is absent (Story 3.4 AC: 5)", () => {
@@ -220,6 +222,7 @@ describe("useSSEConsumer", () => {
     expect(useARIAStore.getState().awaitingInputMessage).toBe(
       "ARIA needs your input to continue"
     );
+    expect(useARIAStore.getState().panelStatus).toBe("awaiting_input");
   });
 
   it("task_complete resets awaitingInputMessage to null (Story 3.4 AC: 5)", () => {

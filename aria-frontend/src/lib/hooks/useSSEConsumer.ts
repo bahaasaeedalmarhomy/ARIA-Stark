@@ -144,6 +144,7 @@ function handleSSEEvent(event: SSEEvent) {
       const payload = event.payload as { reason?: string; message?: string };
       useARIAStore.setState({
         taskStatus: "awaiting_input",
+        panelStatus: "awaiting_input",
         awaitingInputMessage:
           payload.message ?? "ARIA needs your input to continue",
       });

@@ -198,7 +198,7 @@ async def submit_user_input(session_id: str, body: UserInputRequest):
     Returns 404 if no active input queue exists for the session (executor not waiting).
     """
     if not has_input_queue(session_id):
-        return _error_response("SESSION_NOT_FOUND", f"No active input session: {session_id}", 404)
+        return _error_response("INPUT_NOT_EXPECTED", f"No paused session awaiting input: {session_id}", 404)
 
     put_user_input(session_id, body.value)
     return JSONResponse(

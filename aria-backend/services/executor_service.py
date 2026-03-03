@@ -274,6 +274,17 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                 # --- Post-attempt-loop handling ---
 
                 if playwright_timeout_hit:
+                    # Emit awaiting_input so frontend shows InputRequestBanner (H1 fix)
+                    emit_event(
+                        session_id,
+                        "awaiting_input",
+                        {
+                            "step_index": current_step_index,
+                            "reason": "page_timeout",
+                            "message": "Page did not load within 15 seconds — provide instructions or retry",
+                        },
+                        step_index=current_step_index,
+                    )
                     # Wait for user input to resume or timeout → task_failed (AC: 1, 4)
                     user_input = await _wait_for_user_input(
                         session_id, current_step_index, paused_with="page_timeout",
@@ -281,6 +292,11 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                     )
                     if user_input is None:
                         return  # timeout already emitted task_failed
+                    # Restore session status to executing before retrying (H2 fix)
+                    try:
+                        await update_session_status(session_id, "executing")
+                    except Exception:
+                        logger.warning("Failed to restore session %s status to 'executing'", session_id)
                     # Reset and retry same step
                     playwright_timeout_hit = False
                     gemini_error_count = 0
@@ -309,12 +325,28 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                         logger.warning(
                             "Failed to update session %s status to 'error'", session_id
                         )
+                    # Emit awaiting_input so frontend shows InputRequestBanner (H1 fix)
+                    emit_event(
+                        session_id,
+                        "awaiting_input",
+                        {
+                            "step_index": current_step_index,
+                            "reason": "step_error",
+                            "message": f"Step failed after {_MAX_STEP_ATTEMPTS} attempts — provide instructions or retry",
+                        },
+                        step_index=current_step_index,
+                    )
                     user_input = await _wait_for_user_input(
                         session_id, current_step_index, paused_with="step_error",
                         step_description=step_description,
                     )
                     if user_input is None:
                         return  # timeout already emitted task_failed
+                    # Restore session status to executing before retrying (H2 fix)
+                    try:
+                        await update_session_status(session_id, "executing")
+                    except Exception:
+                        logger.warning("Failed to restore session %s status to 'executing'", session_id)
                     # Reset error state and retry same step
                     gemini_error_count = 0
                     continue  # while not step_resolved

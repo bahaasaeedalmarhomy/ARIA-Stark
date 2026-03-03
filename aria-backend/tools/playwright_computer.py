@@ -4,6 +4,12 @@ from typing import Literal, Optional
 
 from google.adk.tools.computer_use.base_computer import BaseComputer, ComputerEnvironment, ComputerState
 
+# Pre-compiled CAPTCHA detection pattern (M1: compiled once at module level)
+_CAPTCHA_RE = re.compile(
+    r"captcha|recaptcha|hcaptcha|cf-challenge|challenge-form|turnstile",
+    re.IGNORECASE,
+)
+
 # Playwright launch args required for containerized environments:
 # --no-sandbox: required because Docker containers run as root
 # --disable-dev-shm-usage: Cloud Run /dev/shm is limited (64MB); prevents crashes
@@ -333,16 +339,12 @@ class PlaywrightComputer(BaseComputer):
         Returns True if any match found, False otherwise.
         Non-fatal: returns False on any error so execution is never aborted by detection.
         """
-        _CAPTCHA_PATTERN = re.compile(
-            r"captcha|recaptcha|hcaptcha|cf-challenge|challenge-form|turnstile",
-            re.IGNORECASE,
-        )
         try:
             html = await self.page.content()
-            if _CAPTCHA_PATTERN.search(html):
+            if _CAPTCHA_RE.search(html):
                 return True
             title = await self.page.title()
-            if _CAPTCHA_PATTERN.search(title):
+            if _CAPTCHA_RE.search(title):
                 return True
         except Exception:
             return False

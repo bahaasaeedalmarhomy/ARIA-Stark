@@ -53,9 +53,9 @@ export function InputRequestBanner({
       });
       onSubmitted?.();
     } catch (err: unknown) {
-      const message =
+      const errMsg =
         err instanceof Error ? err.message : "Network error — please retry";
-      setErrorText(message);
+      setErrorText(errMsg);
     } finally {
       setIsLoading(false);
     }

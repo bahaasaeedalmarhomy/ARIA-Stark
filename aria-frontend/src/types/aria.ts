@@ -15,6 +15,7 @@ export type ThinkingPanelStatus =
   | "planning"
   | "plan_ready"
   | "executing"
+  | "awaiting_input"
   | "complete"
   | "failed";
 

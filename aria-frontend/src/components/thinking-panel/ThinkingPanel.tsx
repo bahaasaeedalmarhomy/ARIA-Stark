@@ -37,6 +37,8 @@ export function ThinkingPanel() {
       ? `${headerBase} text-confidence-high`
       : panelStatus === "failed"
       ? `${headerBase} text-confidence-low`
+      : panelStatus === "awaiting_input"
+      ? `${headerBase} text-amber-400`
       : headerBase;
 
   const headerLabel =
@@ -44,6 +46,8 @@ export function ThinkingPanel() {
       ? "Done"
       : panelStatus === "failed"
       ? "Failed"
+      : panelStatus === "awaiting_input"
+      ? "Awaiting Input"
       : "Thinking";
 
   return (

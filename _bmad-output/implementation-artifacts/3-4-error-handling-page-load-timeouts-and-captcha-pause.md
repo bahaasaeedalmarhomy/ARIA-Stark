@@ -1,6 +1,6 @@
 # Story 3.4: Error Handling, Page Load Timeouts, and CAPTCHA Pause
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -428,18 +428,31 @@ claude-sonnet-4-5 (GitHub Copilot)
 - `useSSEConsumer.ts` switch statement closing brace was missing after adding the new `awaiting_input` case; fixed before tests ran.
 - Story committed at `bcb109a` on `master`.
 
+#### Code Review Fixes Applied
+
+- **[H1]** Added `awaiting_input` SSE emission before `_wait_for_user_input` in both page-timeout and step-error paths in `executor_service.py` — frontend `InputRequestBanner` now renders for all pause states.
+- **[H2]** Added `update_session_status(session_id, "executing")` after user input resumes execution in timeout and step-error paths — Firestore session status is no longer stuck on `"error"`.
+- **[M1]** Moved `_CAPTCHA_PATTERN` `re.compile()` to module-level constant `_CAPTCHA_RE` in `playwright_computer.py` — compiled once, reused.
+- **[M2]** Changed error code from `SESSION_NOT_FOUND` to `INPUT_NOT_EXPECTED` in `task_router.py` `submit_user_input` endpoint for non-paused sessions.
+- **[M3]** Added `panelStatus: "awaiting_input"` to `useSSEConsumer.ts` handler + added `"awaiting_input"` to `ThinkingPanelStatus` type in `aria.ts` + added amber header label and styling in `ThinkingPanel.tsx`.
+- **[L1]** Renamed shadowed `message` variable to `errMsg` in `InputRequestBanner.tsx` catch block.
+- Updated backend tests (Test 4, Test 9) to verify `awaiting_input` SSE is emitted in timeout/step-error paths.
+- Updated frontend tests to verify `panelStatus: "awaiting_input"` is set.
+- All 39 backend tests pass; all 88 frontend tests pass after review fixes.
+
 ### File List
 
-- `aria-backend/tools/playwright_computer.py` — added `detect_captcha()` + `import re`
+- `aria-backend/tools/playwright_computer.py` — added `detect_captcha()` + `import re`; moved CAPTCHA regex to module-level `_CAPTCHA_RE`
 - `aria-backend/services/input_queue_service.py` — **CREATED** per-session async input queue
-- `aria-backend/routers/task_router.py` — added `POST /{session_id}/input` endpoint + `UserInputRequest` model
-- `aria-backend/services/executor_service.py` — refactored retry loop; 3-tier error classification; input-pause-resume; CAPTCHA detection; queue cleanup in finally
+- `aria-backend/routers/task_router.py` — added `POST /{session_id}/input` endpoint + `UserInputRequest` model; error code updated to `INPUT_NOT_EXPECTED`
+- `aria-backend/services/executor_service.py` — refactored retry loop; 3-tier error classification; input-pause-resume; CAPTCHA detection; queue cleanup in finally; added `awaiting_input` SSE for timeout/step-error paths; session status reset on resume
 - `aria-frontend/src/store/ariaStore.ts` — added `awaitingInputMessage: string | null` field
-- `aria-frontend/src/lib/hooks/useSSEConsumer.ts` — added `awaiting_input` case + reset on `task_complete`/`task_failed`
-- `aria-frontend/src/components/thinking-panel/InputRequestBanner.tsx` — **CREATED**
-- `aria-frontend/src/components/thinking-panel/ThinkingPanel.tsx` — integrated `InputRequestBanner`
+- `aria-frontend/src/types/aria.ts` — added `"awaiting_input"` to `ThinkingPanelStatus` type
+- `aria-frontend/src/lib/hooks/useSSEConsumer.ts` — added `awaiting_input` case with `panelStatus` + reset on `task_complete`/`task_failed`
+- `aria-frontend/src/components/thinking-panel/InputRequestBanner.tsx` — **CREATED**; shadowed variable fixed
+- `aria-frontend/src/components/thinking-panel/ThinkingPanel.tsx` — integrated `InputRequestBanner`; added awaiting_input header label/styling
 - `aria-backend/tests/test_playwright_computer.py` — added CAPTCHA detection tests
 - `aria-backend/tests/test_input_queue_service.py` — **CREATED**
-- `aria-backend/tests/test_executor_service.py` — added timeout/retry/captcha/input-resume tests; patched existing tests with `detect_captcha` mock
+- `aria-backend/tests/test_executor_service.py` — added timeout/retry/captcha/input-resume tests; updated to verify `awaiting_input` SSE in pause paths
 - `aria-frontend/src/components/thinking-panel/InputRequestBanner.test.tsx` — **CREATED**
-- `aria-frontend/src/lib/hooks/useSSEConsumer.test.ts` — added `awaiting_input` handler test
+- `aria-frontend/src/lib/hooks/useSSEConsumer.test.ts` — added `awaiting_input` handler test; updated to verify `panelStatus`

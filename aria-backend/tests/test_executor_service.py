@@ -296,6 +296,20 @@ async def test_run_executor_exhausted_retries_emits_step_error():
     assert "error" in payload
     assert "description" in payload
 
+    # awaiting_input SSE must be emitted AFTER step_error so frontend shows InputRequestBanner (H1 fix)
+    assert "awaiting_input" in emit_types, f"Expected 'awaiting_input' in {emit_types}"
+    awaiting_call = next(c for c in mock_emit.call_args_list if c.args[1] == "awaiting_input")
+    awaiting_payload = awaiting_call.args[2]
+    assert awaiting_payload.get("reason") == "step_error", (
+        f"Expected reason='step_error', got {awaiting_payload}"
+    )
+    # awaiting_input must come after step_error in emit order
+    step_error_idx = emit_types.index("step_error")
+    awaiting_idx = emit_types.index("awaiting_input")
+    assert awaiting_idx > step_error_idx, (
+        f"awaiting_input (idx={awaiting_idx}) should come after step_error (idx={step_error_idx})"
+    )
+
     # Must update Firestore status to error (H1 fix)
     mock_update_status.assert_called_once_with(_SESSION_ID, "error")
 
@@ -583,6 +597,14 @@ async def test_run_executor_page_load_timeout_emits_step_error():
     )
     assert "step_index" in payload
     assert "description" in payload
+
+    # awaiting_input SSE must be emitted after step_error so frontend shows InputRequestBanner (H1 fix)
+    assert "awaiting_input" in emit_types, f"Expected 'awaiting_input' in {emit_types}"
+    awaiting_call = next(c for c in mock_emit.call_args_list if c.args[1] == "awaiting_input")
+    awaiting_payload = awaiting_call.args[2]
+    assert awaiting_payload.get("reason") == "page_timeout", (
+        f"Expected reason='page_timeout', got {awaiting_payload}"
+    )
 
     # Session status must be updated to "error"
     mock_update_status.assert_any_call(_SESSION_ID, "error")
