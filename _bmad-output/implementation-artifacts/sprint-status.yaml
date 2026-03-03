@@ -94,8 +94,8 @@ development_status:
   # voice + visual safety confirmations before any irreversible action.
   # FRs: FR1, FR21 (audio), FR23–FR32
   # ─────────────────────────────────────────────────────────────────
-  epic-4: backlog
-  4-1-websocket-audio-relay-backend: backlog
+  epic-4: in-progress
+  4-1-websocket-audio-relay-backend: done
   4-2-browser-audio-capture-and-web-audio-playback: backlog
   4-3-voicewaveform-bargeinpulse-components-and-vad-visual-states: backlog
   4-4-voice-barge-in-execution-halt-and-plan-adaptation: backlog

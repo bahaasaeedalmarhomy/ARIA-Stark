@@ -85,3 +85,6 @@ app.include_router(task_router)
 from handlers import sse_router  # noqa: E402
 
 app.include_router(sse_router)
+from handlers import voice_router  # noqa: E402
+
+app.include_router(voice_router)
