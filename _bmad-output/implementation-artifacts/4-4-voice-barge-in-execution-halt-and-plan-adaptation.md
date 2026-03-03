@@ -1,6 +1,6 @@
 # Story 4.4: Voice Barge-in — Execution Halt and Plan Adaptation
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,44 +28,44 @@ So that I am never trapped watching ARIA do the wrong thing.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `signal_barge_in()` function to `aria-backend/services/session_service.py` (AC: 1)
-  - [ ] Add `def signal_barge_in(session_id: str) -> None:` that calls `get_cancel_flag(session_id).set()` without calling `set_user_cancel_flag()` — this is the barge-in path (NOT user-cancel path)
-  - [ ] Document the distinction: `signal_barge_in()` → executor emits `task_paused`; `interrupt` endpoint → executor emits `task_failed` with `user_cancelled`
+- [x] Task 1: Add `signal_barge_in()` function to `aria-backend/services/session_service.py` (AC: 1)
+  - [x] Add `def signal_barge_in(session_id: str) -> None:` that calls `get_cancel_flag(session_id).set()` without calling `set_user_cancel_flag()` — this is the barge-in path (NOT user-cancel path)
+  - [x] Document the distinction: `signal_barge_in()` → executor emits `task_paused`; `interrupt` endpoint → executor emits `task_failed` with `user_cancelled`
 
-- [ ] Task 2: Add `POST /api/task/{session_id}/barge-in` endpoint to `aria-backend/routers/task_router.py` (AC: 1)
-  - [ ] Import `signal_barge_in` from `services.session_service`
-  - [ ] Handler: call `signal_barge_in(session_id)` only (do NOT call `set_user_cancel_flag()`)
-  - [ ] Return `200` with `{"success": true, "data": {"barge_in": true}, "error": null}`
-  - [ ] No auth check — `session_id` (UUID v4) acts as implicit ownership token, consistent with `/interrupt` and `/input` endpoints
+- [x] Task 2: Add `POST /api/task/{session_id}/barge-in` endpoint to `aria-backend/routers/task_router.py` (AC: 1)
+  - [x] Import `signal_barge_in` from `services.session_service`
+  - [x] Handler: call `signal_barge_in(session_id)` only (do NOT call `set_user_cancel_flag()`)
+  - [x] Return `200` with `{"success": true, "data": {"barge_in": true}, "error": null}`
+  - [x] No auth check — `session_id` (UUID v4) acts as implicit ownership token, consistent with `/interrupt` and `/input` endpoints
 
-- [ ] Task 3: Expand VAD barge-in trigger in `aria-frontend/src/lib/hooks/useVoice.ts` to also fire during `"speaking"` state (AC: 1)
-  - [ ] Change the VAD guard from `voiceStatus === "listening"` to `voiceStatus === "listening" || voiceStatus === "speaking"` in `startAmplitudeLoop()`'s tick function
-  - [ ] Add barge-in HTTP call: when VAD fires AND `taskStatus === "running"` AND `voiceStatus === "speaking"`, call `POST {BACKEND_URL}/api/task/{sessionId}/barge-in` (fire-and-forget fetch)
-  - [ ] Immediately set `voiceStatus: "paused"` in Zustand after calling the barge-in endpoint (instant visual feedback via `BargeInPulse` already present from Story 4.3)
-  - [ ] Read `sessionId` and `taskStatus` from `useARIAStore.getState()` inside the RAF callback (same synchronous-read pattern as `voiceStatus`)
-  - [ ] Add `bargeInSentRef = useRef(false)` to prevent multiple calls per barge-in event; reset it when `voiceStatus` is no longer `"speaking"` or in `disconnect()` cleanup
+- [x] Task 3: Expand VAD barge-in trigger in `aria-frontend/src/lib/hooks/useVoice.ts` to also fire during `"speaking"` state (AC: 1)
+  - [x] Change the VAD guard from `voiceStatus === "listening"` to `voiceStatus === "listening" || voiceStatus === "speaking"` in `startAmplitudeLoop()`'s tick function
+  - [x] Add barge-in HTTP call: when VAD fires AND `taskStatus === "running"` AND `voiceStatus === "speaking"`, call `POST {BACKEND_URL}/api/task/{sessionId}/barge-in` (fire-and-forget fetch)
+  - [x] Immediately set `voiceStatus: "paused"` in Zustand after calling the barge-in endpoint (instant visual feedback via `BargeInPulse` already present from Story 4.3)
+  - [x] Read `sessionId` and `taskStatus` from `useARIAStore.getState()` inside the RAF callback (same synchronous-read pattern as `voiceStatus`)
+  - [x] Add `bargeInSentRef = useRef(false)` to prevent multiple calls per barge-in event; reset it when `voiceStatus` is no longer `"speaking"` or in `disconnect()` cleanup
 
-- [ ] Task 4: Handle `task_paused` SSE event in `aria-frontend/src/lib/hooks/useSSEConsumer.ts` (AC: 4)
-  - [ ] Add `case "task_paused":` to `handleSSEEvent()` switch statement
-  - [ ] Set `taskStatus: "paused"`, `panelStatus: "paused"`, `voiceStatus: "paused"`
-  - [ ] Find the `active` step in `state.steps` and update its `status` to `"paused"`
-  - [ ] Add `"paused"` to `ThinkingPanelStatus` union in `aria-frontend/src/types/aria.ts`
-  - [ ] Add `"paused"` to `StepStatus` union in `aria-frontend/src/types/aria.ts`
+- [x] Task 4: Handle `task_paused` SSE event in `aria-frontend/src/lib/hooks/useSSEConsumer.ts` (AC: 4)
+  - [x] Add `case "task_paused":` to `handleSSEEvent()` switch statement
+  - [x] Set `taskStatus: "paused"`, `panelStatus: "paused"`, `voiceStatus: "paused"`
+  - [x] Find the `active` step in `state.steps` and update its `status` to `"paused"`
+  - [x] Add `"paused"` to `ThinkingPanelStatus` union in `aria-frontend/src/types/aria.ts`
+  - [x] Add `"paused"` to `StepStatus` union in `aria-frontend/src/types/aria.ts`
 
-- [ ] Task 5: Update `StepItem` component to render paused visual state (AC: 5)
-  - [ ] In `aria-frontend/src/components/thinking-panel/StepItem.tsx`, add `"paused"` case to the status icon/card-styling logic
-  - [ ] Paused step card: `bg-zinc-800` background, violet left border (`border-l-2 border-violet-400`)
-  - [ ] Paused step status icon: render `⏸` (pause unicode) in `text-violet-400` or use `PauseIcon` from lucide-react
-  - [ ] Render `<span className="text-violet-400 text-xs font-medium">Paused — listening</span>` below the step description when `step.status === "paused"`
+- [x] Task 5: Update `StepItem` component to render paused visual state (AC: 5)
+  - [x] In `aria-frontend/src/components/thinking-panel/StepItem.tsx`, add `"paused"` case to the status icon/card-styling logic
+  - [x] Paused step card: `bg-zinc-800` background, violet left border (`border-l-2 border-violet-400`)
+  - [x] Paused step status icon: render `⏸` (pause unicode) in `text-violet-400` or use `PauseIcon` from lucide-react
+  - [x] Render `<span className="text-violet-400 text-xs font-medium">Paused — listening</span>` below the step description when `step.status === "paused"`
 
-- [ ] Task 6: Capture Gemini Live transcription in voice handler and forward to re-plan endpoint (AC: 6)
-  - [ ] In `aria-backend/handlers/voice_handler.py`, update `relay_gemini_to_browser()` to also capture `response.text` (transcription) when session is in `"paused"` state
-  - [ ] Add `voice_instruction_queue: dict[str, asyncio.Queue[str]] = {}` to `aria-backend/services/session_service.py` (or a new `voice_instruction_service.py`) with `create_voice_instruction_queue()`, `put_voice_instruction()`, `get_voice_instruction()`, `release_voice_instruction_queue()` helpers
-  - [ ] When `response.text` is received and session `status == "paused"`, put the transcription onto the queue via `put_voice_instruction(session_id, response.text)`
+- [x] Task 6: Capture Gemini Live transcription in voice handler and forward to re-plan endpoint (AC: 6)
+  - [x] In `aria-backend/handlers/voice_handler.py`, update `relay_gemini_to_browser()` to also capture `response.text` (transcription) when session is in `"paused"` state
+  - [x] Add `voice_instruction_queue: dict[str, asyncio.Queue[str]] = {}` to `aria-backend/services/session_service.py` (or a new `voice_instruction_service.py`) with `create_voice_instruction_queue()`, `put_voice_instruction()`, `get_voice_instruction()`, `release_voice_instruction_queue()` helpers
+  - [x] When `response.text` is received and session `status == "paused"`, put the transcription onto the queue via `put_voice_instruction(session_id, response.text)`
 
-- [ ] Task 7: Add `POST /api/task/{session_id}/voice-instruction` endpoint and re-plan service (AC: 6)
-  - [ ] Add endpoint in `aria-backend/routers/task_router.py` that accepts `{"instruction": str}` and calls `handle_voice_replan(session_id, instruction, paused_step_index)` as an async background task
-  - [ ] Implement `handle_voice_replan(session_id: str, instruction: str, paused_step_index: int)` in a new `aria-backend/services/replan_service.py`:
+- [x] Task 7: Add `POST /api/task/{session_id}/voice-instruction` endpoint and re-plan service (AC: 6)
+  - [x] Add endpoint in `aria-backend/routers/task_router.py` that accepts `{"instruction": str}` and calls `handle_voice_replan(session_id, instruction, paused_step_index)` as an async background task
+  - [x] Implement `handle_voice_replan(session_id: str, instruction: str, paused_step_index: int)` in a new `aria-backend/services/replan_service.py`:
     - Load task description from Firestore (`get_session(session_id).task_description`)
     - Build combined instruction: `f"Original task: {task_desc}\nUser correction at step {paused_step_index}: {instruction}"`
     - Call the Planner agent (same pattern as in `task_router.py` start endpoint) to produce a new step plan
@@ -73,30 +73,30 @@ So that I am never trapped watching ARIA do the wrong thing.
     - Update Firestore status to `"executing"`
     - Launch `asyncio.create_task(run_executor(session_id, new_step_plan))` to resume from current browser state
 
-- [ ] Task 8: Emit `task_paused` payload with `reason: "barge_in"` in `aria-backend/services/executor_service.py` (AC: 3)
-  - [ ] In the `except BargeInException` block (the `else` branch, i.e. NOT `is_user_cancel()`), update the emitted `task_paused` payload from `{"paused_at_step": N}` to `{"paused_at_step": N, "reason": "barge_in"}`
-  - [ ] This is a one-line addition; all other logic stays the same
-  - [ ] Also capture `paused_step_index` in the session service for use by `handle_voice_replan()`: call `set_paused_step(session_id, current_step_index)` (new helper in session_service.py)
+- [x] Task 8: Emit `task_paused` payload with `reason: "barge_in"` in `aria-backend/services/executor_service.py` (AC: 3)
+  - [x] In the `except BargeInException` block (the `else` branch, i.e. NOT `is_user_cancel()`), update the emitted `task_paused` payload from `{"paused_at_step": N}` to `{"paused_at_step": N, "reason": "barge_in"}`
+  - [x] This is a one-line addition; all other logic stays the same
+  - [x] Also capture `paused_step_index` in the session service for use by `handle_voice_replan()`: call `set_paused_step(session_id, current_step_index)` (new helper in session_service.py)
 
-- [ ] Task 9: Store and retrieve `paused_step_index` per session in `aria-backend/services/session_service.py` (AC: 6)
-  - [ ] Add `_paused_step_indices: dict[str, int] = {}` module-level dict
-  - [ ] Add `set_paused_step(session_id: str, step_index: int) -> None`
-  - [ ] Add `get_paused_step(session_id: str) -> int:` (returns `0` if not found)
-  - [ ] Call `set_paused_step(session_id, current_step_index)` from executor_service.py's barge-in handler (after emitting `task_paused`)
-  - [ ] Clear it in `reset_cancel_flag()` (add `_paused_step_indices.pop(session_id, None)`)
+- [x] Task 9: Store and retrieve `paused_step_index` per session in `aria-backend/services/session_service.py` (AC: 6)
+  - [x] Add `_paused_step_indices: dict[str, int] = {}` module-level dict
+  - [x] Add `set_paused_step(session_id: str, step_index: int) -> None`
+  - [x] Add `get_paused_step(session_id: str) -> int:` (returns `0` if not found)
+  - [x] Call `set_paused_step(session_id, current_step_index)` from executor_service.py's barge-in handler (after emitting `task_paused`)
+  - [x] Clear it in `reset_cancel_flag()` (add `_paused_step_indices.pop(session_id, None)`)
 
-- [ ] Task 10: Write backend tests for new barge-in endpoint and signal_barge_in (AC: 1, 2, 3)
-  - [ ] Add test file `aria-backend/tests/test_barge_in_endpoint.py`
-  - [ ] Test: `POST /api/task/{session_id}/barge-in` returns 200 and sets cancel flag
-  - [ ] Test: `POST /api/task/{session_id}/barge-in` does NOT set `is_user_cancel()` flag (regression guard: must not trigger task_failed path)
-  - [ ] Test: `signal_barge_in()` sets cancel flag; `reset_cancel_flag()` clears it
-  - [ ] Test: executor emits `task_paused` (not `task_failed`) when `signal_barge_in()` is called — reuse existing test pattern from `test_interrupt_endpoint.py::test_run_executor_barge_in_without_user_cancel_emits_task_paused`
-  - [ ] Test: `task_paused` payload contains `reason: "barge_in"` field
+- [x] Task 10: Write backend tests for new barge-in endpoint and signal_barge_in (AC: 1, 2, 3)
+  - [x] Add test file `aria-backend/tests/test_barge_in_endpoint.py`
+  - [x] Test: `POST /api/task/{session_id}/barge-in` returns 200 and sets cancel flag
+  - [x] Test: `POST /api/task/{session_id}/barge-in` does NOT set `is_user_cancel()` flag (regression guard: must not trigger task_failed path)
+  - [x] Test: `signal_barge_in()` sets cancel flag; `reset_cancel_flag()` clears it
+  - [x] Test: executor emits `task_paused` (not `task_failed`) when `signal_barge_in()` is called — reuse existing test pattern from `test_interrupt_endpoint.py::test_run_executor_barge_in_without_user_cancel_emits_task_paused`
+  - [x] Test: `task_paused` payload contains `reason: "barge_in"` field
 
-- [ ] Task 11: Write frontend tests for barge-in VAD expansion and `task_paused` SSE handler (AC: 1, 4, 5)
-  - [ ] Extend `aria-frontend/src/lib/hooks/useVoice.test.ts`: add test — VAD fires during `"speaking"` state (amplitude > threshold) triggers fetch to `/barge-in` endpoint and sets `voiceStatus: "paused"`
-  - [ ] Extend `aria-frontend/src/lib/hooks/useSSEConsumer.test.ts`: add test — `task_paused` event sets `taskStatus: "paused"`, `panelStatus: "paused"`, `voiceStatus: "paused"`, and active step transitions to `status: "paused"`
-  - [ ] Extend `aria-frontend/src/components/thinking-panel/StepItem.test.tsx` (or create if absent): add test — step with `status: "paused"` renders violet border, pause icon, and "Paused — listening" text
+- [x] Task 11: Write frontend tests for barge-in VAD expansion and `task_paused` SSE handler (AC: 1, 4, 5)
+  - [x] Extend `aria-frontend/src/lib/hooks/useVoice.test.ts`: add test — VAD fires during `"speaking"` state (amplitude > threshold) triggers fetch to `/barge-in` endpoint and sets `voiceStatus: "paused"`
+  - [x] Extend `aria-frontend/src/lib/hooks/useSSEConsumer.test.ts`: add test — `task_paused` event sets `taskStatus: "paused"`, `panelStatus: "paused"`, `voiceStatus: "paused"`, and active step transitions to `status: "paused"`
+  - [x] Extend `aria-frontend/src/components/thinking-panel/StepItem.test.tsx` (or create if absent): add test — step with `status: "paused"` renders violet border, pause icon, and "Paused — listening" text
 
 ## Dev Notes
 
@@ -535,10 +535,53 @@ Current test count per iteration: 168 frontend, ~60 backend. Any regression must
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Sonnet 4.6 (GitHub Copilot)
 
 ### Debug Log References
 
+No blockers encountered. All implementation followed the Dev Notes specification exactly.
+
 ### Completion Notes List
 
+- ✅ Task 1: Added `signal_barge_in()` to `session_service.py` — sets cancel flag only, no `is_user_cancel()` marker
+- ✅ Task 2: Added `POST /api/task/{session_id}/barge-in` endpoint to `task_router.py` — returns 200 with `{barge_in: true}`
+- ✅ Task 3: Expanded VAD guard in `useVoice.ts` to fire on `"speaking"` state; added `bargeInSentRef` dedup ref; fire-and-forget barge-in fetch; moves `BACKEND_URL` to `constants.ts`
+- ✅ Task 4: Added `case "task_paused":` to `useSSEConsumer.ts`; updated `plan_ready` case for `is_replan`; added `"paused"` to `ThinkingPanelStatus` and `StepStatus` types
+- ✅ Task 5: Updated `StepItem.tsx` with violet border, ⏸ icon, and "Paused — listening" label for paused state
+- ✅ Task 6: Updated `relay_gemini_to_browser()` in `voice_handler.py` to accept `session_id` and call `try_put_instruction()` when `response.text` is received; created `voice_instruction_service.py`
+- ✅ Task 7: Created `replan_service.py` with `wait_for_voice_instruction_and_replan()`; re-plan launched as asyncio task from executor's barge-in handler (not barge-in endpoint, avoiding race condition noted in Dev Notes)
+- ✅ Task 8: Updated executor `task_paused` payload to include `"reason": "barge_in"`; added `set_paused_step()` call; launches `wait_for_voice_instruction_and_replan` task
+- ✅ Task 9: Added `_paused_step_indices`, `set_paused_step()`, `get_paused_step()` to `session_service.py`; cleared in `reset_cancel_flag()`
+- ✅ Task 10: Created `test_barge_in_endpoint.py` with 5 tests — all passing
+- ✅ Task 11: Added 10 new frontend tests (VAD speaking, barge-in fetch, task_paused SSE, plan_ready is_replan, StepItem paused state) — all 178 frontend tests passing
+
+**Race condition note (from Dev Notes):** The `wait_for_voice_instruction_and_replan` task is launched from within `executor_service.py`'s barge-in handler (after `task_paused` is emitted), NOT from the `/barge-in` endpoint. This avoids the race where `get_paused_step()` wouldn't yet have the correct step index when the HTTP response returns.
+
+**Test counts:** Backend: 175 passed (5 new), Frontend: 178 passed (10 new from Story 4.4).
+
 ### File List
+
+**Backend new files:**
+- `aria-backend/services/voice_instruction_service.py`
+- `aria-backend/services/replan_service.py`
+- `aria-backend/tests/test_barge_in_endpoint.py`
+
+**Backend modified files:**
+- `aria-backend/services/session_service.py`
+- `aria-backend/services/executor_service.py`
+- `aria-backend/handlers/voice_handler.py`
+- `aria-backend/routers/task_router.py`
+
+**Frontend new files:**
+- `aria-frontend/src/lib/constants.ts`
+
+**Frontend modified files:**
+- `aria-frontend/src/types/aria.ts`
+- `aria-frontend/src/lib/hooks/useVoice.ts`
+- `aria-frontend/src/lib/hooks/useSSEConsumer.ts`
+- `aria-frontend/src/components/thinking-panel/StepItem.tsx`
+
+**Frontend modified tests:**
+- `aria-frontend/src/lib/hooks/useVoice.test.ts`
+- `aria-frontend/src/lib/hooks/useSSEConsumer.test.ts`
+- `aria-frontend/src/components/thinking-panel/StepItem.test.tsx`

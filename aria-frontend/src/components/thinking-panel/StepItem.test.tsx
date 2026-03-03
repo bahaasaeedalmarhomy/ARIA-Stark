@@ -95,4 +95,36 @@ describe("StepItem", () => {
     );
     expect(screen.queryByTestId("screenshot-viewer")).toBeNull();
   });
+
+  // ── Paused state (Story 4.4) ───────────────────────────────────────────────
+
+  it('paused: renders pause icon (⏸) in violet', () => {
+    render(<StepItem step={mockStep({ status: "paused" })} />);
+    // The pause icon is a span containing ⏸
+    expect(screen.getByText("⏸")).toBeTruthy();
+    expect(screen.getByText("⏸").className).toMatch(/text-violet-400/);
+  });
+
+  it('paused: renders "Paused — listening" text in violet', () => {
+    render(<StepItem step={mockStep({ status: "paused" })} />);
+    const label = screen.getByText("Paused — listening");
+    expect(label).toBeTruthy();
+    expect(label.className).toMatch(/text-violet-400/);
+  });
+
+  it('paused: card has bg-zinc-800 and border-l-violet-400', () => {
+    render(<StepItem step={mockStep({ status: "paused" })} />);
+    const card = screen.getByTestId("step-card");
+    expect(card.className).toMatch(/bg-zinc-800/);
+    expect(card.className).toMatch(/border-l-violet-400/);
+  });
+
+  it('paused: does NOT render ScreenshotViewer', () => {
+    render(
+      <StepItem
+        step={mockStep({ status: "paused", screenshot_url: "https://example.com/shot.png" })}
+      />
+    );
+    expect(screen.queryByTestId("screenshot-viewer")).toBeNull();
+  });
 });

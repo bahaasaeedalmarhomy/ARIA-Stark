@@ -106,6 +106,7 @@ def reset_cancel_flag(session_id: str) -> None:
     else:
         _cancel_flags[session_id] = asyncio.Event()
     clear_user_cancel_flag(session_id)
+    _paused_step_indices.pop(session_id, None)
 
 
 # ──────────────────────────── User-cancel flags ───────────────────────────
@@ -127,3 +128,30 @@ def is_user_cancel(session_id: str) -> bool:
 def clear_user_cancel_flag(session_id: str) -> None:
     """Clear the user-cancel marker (call on session reset)."""
     _user_cancel_flags.pop(session_id, None)
+
+
+# ──────────────────────────── Barge-in signal (voice, not user cancel) ────────
+
+def signal_barge_in(session_id: str) -> None:
+    """
+    Signal a voice barge-in for a session.
+    Sets the cancel flag ONLY — does NOT set is_user_cancel().
+    The executor will emit task_paused (not task_failed) in response.
+    Called from POST /api/task/{session_id}/barge-in.
+    """
+    get_cancel_flag(session_id).set()
+
+
+# ──────────────────────────── Paused step tracking ────────────────────────────
+
+_paused_step_indices: dict[str, int] = {}
+
+
+def set_paused_step(session_id: str, step_index: int) -> None:
+    """Store the step index at which execution was paused (for re-plan)."""
+    _paused_step_indices[session_id] = step_index
+
+
+def get_paused_step(session_id: str) -> int:
+    """Return the paused step index, or 0 if not set."""
+    return _paused_step_indices.get(session_id, 0)

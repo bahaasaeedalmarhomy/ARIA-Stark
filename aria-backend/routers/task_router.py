@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from services.executor_service import run_executor
 from services.planner_service import run_planner
-from services.session_service import create_session, update_session_status, get_cancel_flag, set_user_cancel_flag
+from services.session_service import create_session, update_session_status, get_cancel_flag, set_user_cancel_flag, signal_barge_in
 from services.sse_service import emit_event
 from services.input_queue_service import has_input_queue, put_user_input
 
@@ -204,6 +204,25 @@ async def interrupt_task(session_id: str):
     return JSONResponse(
         status_code=200,
         content={"success": True, "data": {"interrupted": True}, "error": None},
+    )
+
+
+@router.post("/{session_id}/barge-in")
+async def barge_in_task(session_id: str):
+    """
+    POST /api/task/{session_id}/barge-in
+
+    Signals a voice barge-in — sets the cancel flag WITHOUT setting is_user_cancel().
+    The executor will emit task_paused (not task_failed) and schedule re-plan.
+    The re-plan waits for a voice transcription via voice_instruction_service.
+
+    No auth check — session_id (UUID v4) acts as implicit ownership token,
+    consistent with /interrupt and /input endpoints.
+    """
+    signal_barge_in(session_id)
+    return JSONResponse(
+        status_code=200,
+        content={"success": True, "data": {"barge_in": True}, "error": None},
     )
 
 

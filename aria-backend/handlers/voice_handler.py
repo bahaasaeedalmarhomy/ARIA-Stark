@@ -61,12 +61,21 @@ async def drain_queue_to_gemini(
 async def relay_gemini_to_browser(
     ws: WebSocket,
     gemini_session,
+    session_id: str,
 ) -> None:
-    """Receive audio bytes from Gemini Live and forward them immediately to the browser."""
+    """Receive audio bytes from Gemini Live and forward them immediately to the browser.
+
+    Also captures Gemini transcription (response.text) when the session is in
+    "paused" state (i.e. after a barge-in) and forwards it to the
+    voice_instruction_service queue so the re-plan service can act on it.
+    """
     async for response in gemini_session.receive():
         if response.data:
             await ws.send_bytes(response.data)
-        # response.text (transcription) intentionally ignored — handled in Story 4.2+
+        # Capture transcription ONLY when session is paused (barge-in mode)
+        if response.text:
+            from services.voice_instruction_service import try_put_instruction  # lazy import
+            try_put_instruction(session_id, response.text)
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +119,7 @@ async def audio_relay(websocket: WebSocket, session_id: str) -> None:
             tasks = [
                 asyncio.create_task(relay_inbound_to_queue(websocket, inbound_queue)),
                 asyncio.create_task(drain_queue_to_gemini(inbound_queue, gemini_session)),
-                asyncio.create_task(relay_gemini_to_browser(websocket, gemini_session)),
+                asyncio.create_task(relay_gemini_to_browser(websocket, gemini_session, session_id)),
             ]
             # On disconnect, relay_inbound_to_queue raises WebSocketDisconnect
             # which propagates immediately (no return_exceptions) so finally

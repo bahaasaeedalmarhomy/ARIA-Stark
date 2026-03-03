@@ -28,7 +28,7 @@ from handlers.audit_writer import write_audit_log
 from prompts.executor_system import EXECUTOR_SYSTEM_PROMPT
 from services.gcs_service import upload_screenshot
 from services.input_queue_service import clear_input_queue, get_input_queue
-from services.session_service import update_session_status, is_user_cancel, clear_user_cancel_flag
+from services.session_service import update_session_status, is_user_cancel, clear_user_cancel_flag, set_paused_step
 from services.sse_service import emit_event
 from services.task_complete_service import handle_task_complete
 from tools.playwright_computer import BargeInException, PlaywrightComputer
@@ -496,12 +496,18 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             emit_event(
                 session_id,
                 "task_paused",
-                {"paused_at_step": current_step_index},
+                {"paused_at_step": current_step_index, "reason": "barge_in"},
             )
             try:
                 await update_session_status(session_id, "paused")
             except Exception:
                 logger.warning("Failed to update session %s status to 'paused'", session_id)
+            set_paused_step(session_id, current_step_index)
+            # Schedule re-plan listening loop AFTER task_paused is emitted
+            from services.replan_service import wait_for_voice_instruction_and_replan  # deferred import
+            asyncio.create_task(
+                wait_for_voice_instruction_and_replan(session_id, current_step_index)
+            )
 
     except Exception as e:
         logger.error(

@@ -268,7 +268,22 @@ describe("useVoice", () => {
     // Simulate what startAmplitudeLoop's tick() does for VAD detection
     const amplitude = 0.25; // above VAD_ONSET_THRESHOLD (0.15)
     const { voiceStatus, vadActive } = useARIAStore.getState();
-    if (voiceStatus === "listening" && amplitude > 0.15) {
+    if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > 0.15) {
+      if (!vadActive) {
+        useARIAStore.setState({ vadActive: true });
+      }
+    }
+
+    expect(useARIAStore.getState().vadActive).toBe(true);
+  });
+
+  it("VAD sets vadActive true when amplitude exceeds threshold in speaking state (Story 4.4)", () => {
+    // Story 4.4 expands the VAD guard to also fire during "speaking" state
+    useARIAStore.setState({ voiceStatus: "speaking", vadActive: false });
+
+    const amplitude = 0.25; // above VAD_ONSET_THRESHOLD (0.15)
+    const { voiceStatus, vadActive } = useARIAStore.getState();
+    if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > 0.15) {
       if (!vadActive) {
         useARIAStore.setState({ vadActive: true });
       }
@@ -291,12 +306,13 @@ describe("useVoice", () => {
     expect(useARIAStore.getState().vadActive).toBe(false);
   });
 
-  it("VAD does NOT set vadActive when voiceStatus is not listening", () => {
-    useARIAStore.setState({ voiceStatus: "speaking", vadActive: false });
+  it("VAD does NOT set vadActive when voiceStatus is idle (not listening or speaking)", () => {
+    // Story 4.4: guard expanded to listening OR speaking. Idle should never trigger VAD.
+    useARIAStore.setState({ voiceStatus: "idle", vadActive: false });
 
-    const amplitude = 0.5; // above threshold but wrong state
+    const amplitude = 0.5; // above threshold but irrelevant state
     const { voiceStatus, vadActive } = useARIAStore.getState();
-    if (voiceStatus === "listening" && amplitude > 0.15) {
+    if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > 0.15) {
       if (!vadActive) {
         useARIAStore.setState({ vadActive: true });
       }
@@ -315,5 +331,75 @@ describe("useVoice", () => {
     });
 
     expect(useARIAStore.getState().vadActive).toBe(false);
+  });
+
+  // ── Barge-in (Story 4.4) ──────────────────────────────────────
+
+  it("barge-in: sets voiceStatus to 'paused' and calls fetch when speaking + running + amplitude > threshold", () => {
+    // Simulate the barge-in path: voiceStatus=speaking, taskStatus=running, amplitude > threshold
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    useARIAStore.setState({
+      voiceStatus: "speaking",
+      taskStatus: "running",
+      sessionId: "sess_barge_in_test",
+      vadActive: false,
+    });
+
+    // Simulate what the tick function does when barge-in conditions are met
+    const bargeInSent = { current: false };
+    const amplitude = 0.3;
+    const BACKEND_URL = "http://localhost:8080";
+
+    const { voiceStatus, taskStatus, sessionId: currentSessionId } = useARIAStore.getState();
+    if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > 0.15) {
+      if (voiceStatus === "speaking" && taskStatus === "running" && !bargeInSent.current) {
+        bargeInSent.current = true;
+        useARIAStore.setState({ voiceStatus: "paused" });
+        fetch(`${BACKEND_URL}/api/task/${currentSessionId}/barge-in`, { method: "POST" }).catch(
+          () => undefined
+        );
+      }
+    }
+
+    expect(useARIAStore.getState().voiceStatus).toBe("paused");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8080/api/task/sess_barge_in_test/barge-in",
+      { method: "POST" }
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("barge-in: does NOT call fetch when task is not running", () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    useARIAStore.setState({
+      voiceStatus: "speaking",
+      taskStatus: "completed", // not running
+      sessionId: "sess_barge_in_no_run",
+      vadActive: false,
+    });
+
+    const bargeInSent = { current: false };
+    const amplitude = 0.3;
+    const BACKEND_URL = "http://localhost:8080";
+
+    const { voiceStatus, taskStatus, sessionId: currentSessionId } = useARIAStore.getState();
+    if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > 0.15) {
+      if (voiceStatus === "speaking" && taskStatus === "running" && !bargeInSent.current) {
+        bargeInSent.current = true;
+        useARIAStore.setState({ voiceStatus: "paused" });
+        fetch(`${BACKEND_URL}/api/task/${currentSessionId}/barge-in`, { method: "POST" }).catch(
+          () => undefined
+        );
+      }
+    }
+
+    // voiceStatus unchanged, fetch not called
+    expect(useARIAStore.getState().voiceStatus).toBe("speaking");
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

@@ -295,4 +295,99 @@ describe("useSSEConsumer", () => {
     unmount();
     expect(MockEventSource.instance?.close).toHaveBeenCalled();
   });
+
+  // ── task_paused (Story 4.4) ────────────────────────────────────────────────
+
+  it("handles task_paused event — sets taskStatus, panelStatus, voiceStatus to paused", () => {
+    useARIAStore.setState({
+      sessionId: "test-session",
+      steps: [mockStep({ step_index: 1, status: "active" })],
+      taskStatus: "running",
+      panelStatus: "executing",
+      voiceStatus: "speaking",
+    });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "task_paused",
+          session_id: "test-session",
+          step_index: 1,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: { paused_at_step: 1, reason: "barge_in" },
+        }),
+      } as MessageEvent);
+    });
+
+    const state = useARIAStore.getState();
+    expect(state.taskStatus).toBe("paused");
+    expect(state.panelStatus).toBe("paused");
+    expect(state.voiceStatus).toBe("paused");
+  });
+
+  it("handles task_paused event — transitions active step status to 'paused'", () => {
+    useARIAStore.setState({
+      sessionId: "test-session",
+      steps: [
+        mockStep({ step_index: 0, status: "complete" }),
+        mockStep({ step_index: 1, status: "active" }),
+        mockStep({ step_index: 2, status: "pending" }),
+      ],
+    });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "task_paused",
+          session_id: "test-session",
+          step_index: 1,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: { paused_at_step: 1, reason: "barge_in" },
+        }),
+      } as MessageEvent);
+    });
+
+    const state = useARIAStore.getState();
+    expect(state.steps[0].status).toBe("complete"); // unchanged
+    expect(state.steps[1].status).toBe("paused");   // was active → paused
+    expect(state.steps[2].status).toBe("pending");  // unchanged
+  });
+
+  it("handles plan_ready with is_replan — resets steps, sets voiceStatus to listening", () => {
+    useARIAStore.setState({
+      sessionId: "test-session",
+      taskStatus: "paused",
+      voiceStatus: "paused",
+      steps: [mockStep({ step_index: 0, status: "paused" })],
+    });
+    renderHook(() => useSSEConsumer());
+
+    act(() => {
+      MockEventSource.instance?.onmessage?.({
+        data: JSON.stringify({
+          event_type: "plan_ready",
+          session_id: "test-session",
+          step_index: null,
+          timestamp: "2024-01-01T00:00:00Z",
+          payload: {
+            task_summary: "Revised task",
+            steps: [
+              { step_index: 0, description: "New step 1", action: "navigate", target: null, value: null, confidence: 0.9, is_destructive: false, requires_user_input: false, user_input_reason: null, status: "pending" },
+            ],
+            is_replan: true,
+          },
+        }),
+      } as MessageEvent);
+    });
+
+    const state = useARIAStore.getState();
+    expect(state.taskStatus).toBe("running");       // reset from paused
+    expect(state.voiceStatus).toBe("listening");    // clear paused state
+    expect(state.panelStatus).toBe("plan_ready");
+    expect(state.taskSummary).toBe("Revised task");
+    expect(state.steps).toHaveLength(1);
+    expect(state.steps[0].status).toBe("pending");
+  });
 });

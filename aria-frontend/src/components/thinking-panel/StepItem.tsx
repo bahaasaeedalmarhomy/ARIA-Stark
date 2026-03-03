@@ -10,16 +10,19 @@ type StepItemProps = {
 
 export function StepItem({ step }: StepItemProps) {
   const isActive = step.status === "active";
+  const isPaused = step.status === "paused";
 
   const cardClasses =
     "rounded-md border border-border-aria px-3 py-2 flex items-start gap-2 transition-colors " +
     (isActive
       ? "bg-surface-raised border-l-2 border-l-step-active"
-      : "bg-surface");
+      : isPaused
+        ? "bg-zinc-800 border-l-2 border-l-violet-400"
+        : "bg-surface");
 
   const descriptionClasses =
     "font-mono text-sm " +
-    (isActive ? "text-text-primary" : "text-text-secondary");
+    (isActive || isPaused ? "text-text-primary" : "text-text-secondary");
 
   let statusIcon: React.ReactNode = null;
   switch (step.status) {
@@ -28,6 +31,9 @@ export function StepItem({ step }: StepItemProps) {
       break;
     case "active":
       statusIcon = <Loader2 className="w-4 h-4 animate-spin text-step-active" />;
+      break;
+    case "paused":
+      statusIcon = <span className="text-violet-400 text-sm leading-none">⏸</span>;
       break;
     case "complete":
       statusIcon = <Check className="w-4 h-4 text-confidence-high" />;
@@ -55,6 +61,11 @@ export function StepItem({ step }: StepItemProps) {
           </span>
           <ConfidenceBadge confidence={step.confidence} />
         </div>
+        {step.status === "paused" && (
+          <span className="text-violet-400 text-xs font-medium mt-1 block">
+            Paused — listening
+          </span>
+        )}
         {step.status === "complete" && step.screenshot_url && (
           <ScreenshotViewer
             screenshotUrl={step.screenshot_url}

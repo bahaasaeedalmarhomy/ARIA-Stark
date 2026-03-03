@@ -9,7 +9,7 @@ export type TaskStatus =
   | "failed"
   | "cancelled"; // AC: 4 — user-initiated cancel
 
-export type StepStatus = "pending" | "active" | "complete" | "error";
+export type StepStatus = "pending" | "active" | "paused" | "complete" | "error";
 
 export type ThinkingPanelStatus =
   | "idle"
@@ -17,6 +17,7 @@ export type ThinkingPanelStatus =
   | "plan_ready"
   | "executing"
   | "awaiting_input"
+  | "paused"
   | "complete"
   | "failed";
 

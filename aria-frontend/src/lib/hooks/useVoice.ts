@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useARIAStore } from "@/lib/store/aria-store";
 import { createAudioWebSocket } from "@/lib/ws/audioWebSocket";
+import { BACKEND_URL } from "@/lib/constants";
 
 // ─────────────────────────────────────────────────────────────────
 // Browser capability check
@@ -62,6 +63,8 @@ export function useVoice() {
   const streamRef = useRef<MediaStream | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const vadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Barge-in dedup ref — prevents multiple HTTP calls per utterance during speaking state
+  const bargeInSentRef = useRef(false);
 
   // Refs for playback pipeline
   const playbackContextRef = useRef<AudioContext | null>(null);
@@ -84,14 +87,27 @@ export function useVoice() {
       useARIAStore.setState({ audioAmplitude: amplitude });
 
       // VAD threshold detection — provides 200ms visual acknowledgment (AC5)
-      const { voiceStatus, vadActive } = useARIAStore.getState();
-      if (voiceStatus === "listening" && amplitude > VAD_ONSET_THRESHOLD) {
+      // Also triggers barge-in when user speaks during ARIA narration (Story 4.4)
+      const { voiceStatus, vadActive, sessionId: currentSessionId, taskStatus } = useARIAStore.getState();
+      if ((voiceStatus === "listening" || voiceStatus === "speaking") && amplitude > VAD_ONSET_THRESHOLD) {
         if (!vadActive) {
           useARIAStore.setState({ vadActive: true });
         }
+
+        // Barge-in trigger: fire ONCE per utterance when ARIA is speaking during execution
+        if (voiceStatus === "speaking" && taskStatus === "running" && !bargeInSentRef.current) {
+          bargeInSentRef.current = true;
+          useARIAStore.setState({ voiceStatus: "paused" }); // immediate visual feedback
+          // Fire-and-forget — this is inside RAF/non-React context (no await available)
+          fetch(`${BACKEND_URL}/api/task/${currentSessionId}/barge-in`, { method: "POST" }).catch(
+            () => undefined // network errors are non-fatal here
+          );
+        }
+
         if (vadTimerRef.current) clearTimeout(vadTimerRef.current);
         vadTimerRef.current = setTimeout(() => {
           useARIAStore.setState({ vadActive: false });
+          bargeInSentRef.current = false; // reset for next utterance
           vadTimerRef.current = null;
         }, VAD_SILENCE_DEBOUNCE_MS);
       }
@@ -318,6 +334,8 @@ export function useVoice() {
       vadTimerRef.current = null;
     }
 
+    bargeInSentRef.current = false; // reset barge-in dedup ref
+
     useARIAStore.setState({
       voiceStatus: status,
       isVoiceConnecting: false,
@@ -341,6 +359,7 @@ export function useVoice() {
       stopAmplitudeLoop();
       if (speakingEndTimerRef.current) clearTimeout(speakingEndTimerRef.current);
       if (vadTimerRef.current) clearTimeout(vadTimerRef.current);
+      bargeInSentRef.current = false;
       useARIAStore.setState({ vadActive: false });
       streamRef.current?.getTracks().forEach((t) => t.stop());
       processorRef.current?.disconnect();

@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { useARIAStore } from "@/lib/store/aria-store";
 import type { SSEEvent, PlanStep, StepStatus } from "@/types/aria";
 
+import { BACKEND_URL } from "@/lib/constants";
+
 const MAX_RECONNECT_ATTEMPTS = 5;
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
 
 export function useSSEConsumer() {
   const sessionId = useARIAStore((state) => state.sessionId);
@@ -74,14 +74,19 @@ function handleSSEEvent(event: SSEEvent) {
       const payload = event.payload as {
         steps: PlanStep[];
         task_summary: string;
+        is_replan?: boolean;
       };
-      useARIAStore.setState({
-        steps: payload.steps.map((s) => ({
+      useARIAStore.setState((state) => {
+        state.steps = payload.steps.map((s) => ({
           ...s,
           status: "pending" as StepStatus,
-        })),
-        taskSummary: payload.task_summary,
-        panelStatus: "plan_ready",
+        }));
+        state.taskSummary = payload.task_summary;
+        state.panelStatus = "plan_ready";
+        if (payload.is_replan) {
+          state.taskStatus = "running";
+          state.voiceStatus = "listening"; // clear paused state — ARIA back to ambient listening
+        }
       });
       break;
     }
@@ -151,6 +156,17 @@ function handleSSEEvent(event: SSEEvent) {
         panelStatus: "awaiting_input",
         awaitingInputMessage:
           payload.message ?? "ARIA needs your input to continue",
+      });
+      break;
+    }
+    case "task_paused": {
+      // Voice barge-in pause — mark active step as paused and update app state
+      useARIAStore.setState((state) => {
+        const activeStep = state.steps.find((s) => s.status === "active");
+        if (activeStep) activeStep.status = "paused";
+        state.taskStatus = "paused";
+        state.panelStatus = "paused";
+        state.voiceStatus = "paused"; // triggers BargeInPulse + violet waveform (Story 4.3)
       });
       break;
     }
