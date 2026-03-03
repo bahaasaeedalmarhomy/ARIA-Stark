@@ -89,7 +89,7 @@ async def _wait_for_user_input(
         return None
 
 
-async def run_executor(session_id: str, step_plan: dict) -> None:
+async def run_executor(session_id: str, step_plan: dict, existing_pc: PlaywrightComputer | None = None) -> None:
     """
     Per-session executor loop.
 
@@ -111,12 +111,16 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
         session_id: The active Firestore session ID (e.g. "sess_<uuid>").
         step_plan: Validated canonical step plan dict from the Planner.
     """
-    pc = PlaywrightComputer(session_id=session_id)
-    await pc.start()
+    if existing_pc is not None:
+        pc = existing_pc
+    else:
+        pc = PlaywrightComputer(session_id=session_id)
+        await pc.start()
 
     completed_steps: list[dict] = []
     current_step_index: int = 0
     success = False
+    barge_in_active = False
 
     try:
         # Build per-session agent with actual browser — NOT the module-level
@@ -503,6 +507,13 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             except Exception:
                 logger.warning("Failed to update session %s status to 'paused'", session_id)
             set_paused_step(session_id, current_step_index)
+            # Preserve browser for reuse by replan (don't destroy on barge-in)
+            from services.session_service import set_browser_instance  # deferred import
+            set_browser_instance(session_id, pc)
+            barge_in_active = True
+            # Create voice instruction queue NOW so it exists before transcription arrives
+            from services.voice_instruction_service import create_voice_instruction_queue  # deferred import
+            create_voice_instruction_queue(session_id)
             # Schedule re-plan listening loop AFTER task_paused is emitted
             from services.replan_service import wait_for_voice_instruction_and_replan  # deferred import
             asyncio.create_task(
@@ -526,7 +537,8 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             logger.warning("Failed to update session %s status to 'failed'", session_id)
 
     finally:
-        await pc.stop()  # ALWAYS clean up browser resources
+        if not barge_in_active:
+            await pc.stop()  # Clean up browser resources (skipped on barge-in to preserve state)
         clear_input_queue(session_id)  # Clean up per-session input queue (AC: 4)
         clear_user_cancel_flag(session_id)  # Safety net: clear user-cancel flag (idempotent)
 

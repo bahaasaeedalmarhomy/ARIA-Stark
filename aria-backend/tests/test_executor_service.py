@@ -170,8 +170,8 @@ async def test_run_executor_barge_in_emits_task_paused_and_skips_handle_complete
     # Must NOT call handle_task_complete
     mock_htc.assert_not_called()
 
-    # pc.stop() must still be called
-    mock_pc.stop.assert_called_once()
+    # pc.stop() must NOT be called on barge-in (browser preserved for replan)
+    mock_pc.stop.assert_not_called()
 
 
 # ─────────────────────────────── Test 3 ──────────────────────────────────────

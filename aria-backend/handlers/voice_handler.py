@@ -65,9 +65,10 @@ async def relay_gemini_to_browser(
 ) -> None:
     """Receive audio bytes from Gemini Live and forward them immediately to the browser.
 
-    Also captures Gemini transcription (response.text) when the session is in
-    "paused" state (i.e. after a barge-in) and forwards it to the
-    voice_instruction_service queue so the re-plan service can act on it.
+    Also captures Gemini transcription (response.text) and forwards it to the
+    voice_instruction_service queue via try_put_instruction(). The queue only
+    exists during a barge-in pause (created by executor_service), so
+    transcriptions during normal execution are silently dropped.
     """
     async for response in gemini_session.receive():
         if response.data:

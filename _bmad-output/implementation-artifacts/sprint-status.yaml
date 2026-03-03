@@ -98,6 +98,6 @@ development_status:
   4-1-websocket-audio-relay-backend: done
   4-2-browser-audio-capture-and-web-audio-playback: done
   4-3-voicewaveform-bargeinpulse-components-and-vad-visual-states: done
-  4-4-voice-barge-in-execution-halt-and-plan-adaptation: review
-  4-5-destructive-action-guard-voice-and-visual-confirmation: backlog
+  4-4-voice-barge-in-execution-halt-and-plan-adaptation: done
+  4-5-destructive-action-guard-voice-and-visual-confirmation: ready-for-dev
   epic-4-retrospective: optional

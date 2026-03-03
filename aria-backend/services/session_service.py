@@ -14,7 +14,7 @@ def _get_db() -> firestore.AsyncClient:
     return _db
 
 
-async def create_session(uid: str, task_description: str) -> dict:
+async def create_session(uid: str, task_description: str, context: str | None = None) -> dict:
     """
     Creates a new Firestore session document under sessions/{session_id}.
 
@@ -22,6 +22,7 @@ async def create_session(uid: str, task_description: str) -> dict:
     - session_id  : "sess_" + UUID v4
     - uid         : Firebase anonymous auth uid
     - task_description: verbatim from request body
+    - context     : optional supplementary context (FR3) — preserved for re-plan
     - status      : "pending" (pre-execution state; ADK runner not started here)
     - created_at  : ISO 8601 UTC timestamp with "Z" suffix
     - steps       : [] (populated in Stories 2+)
@@ -35,6 +36,7 @@ async def create_session(uid: str, task_description: str) -> dict:
         "session_id": session_id,
         "uid": uid,
         "task_description": task_description,
+        "context": context or "",
         "status": "pending",
         "created_at": created_at,
         "steps": [],
@@ -155,3 +157,18 @@ def set_paused_step(session_id: str, step_index: int) -> None:
 def get_paused_step(session_id: str) -> int:
     """Return the paused step index, or 0 if not set."""
     return _paused_step_indices.get(session_id, 0)
+
+
+# ──────────────────────────── Browser instance storage ────────────────────────
+
+_browser_instances: dict[str, object] = {}
+
+
+def set_browser_instance(session_id: str, pc: object) -> None:
+    """Store a PlaywrightComputer instance for reuse after barge-in (preserves browser state)."""
+    _browser_instances[session_id] = pc
+
+
+def get_browser_instance(session_id: str) -> object | None:
+    """Retrieve and remove a stored PlaywrightComputer instance. Returns None if not found."""
+    return _browser_instances.pop(session_id, None)

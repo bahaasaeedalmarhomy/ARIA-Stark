@@ -1,6 +1,6 @@
 # Story 4.4: Voice Barge-in — Execution Halt and Plan Adaptation
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -63,15 +63,16 @@ So that I am never trapped watching ARIA do the wrong thing.
   - [x] Add `voice_instruction_queue: dict[str, asyncio.Queue[str]] = {}` to `aria-backend/services/session_service.py` (or a new `voice_instruction_service.py`) with `create_voice_instruction_queue()`, `put_voice_instruction()`, `get_voice_instruction()`, `release_voice_instruction_queue()` helpers
   - [x] When `response.text` is received and session `status == "paused"`, put the transcription onto the queue via `put_voice_instruction(session_id, response.text)`
 
-- [x] Task 7: Add `POST /api/task/{session_id}/voice-instruction` endpoint and re-plan service (AC: 6)
-  - [x] Add endpoint in `aria-backend/routers/task_router.py` that accepts `{"instruction": str}` and calls `handle_voice_replan(session_id, instruction, paused_step_index)` as an async background task
-  - [x] Implement `handle_voice_replan(session_id: str, instruction: str, paused_step_index: int)` in a new `aria-backend/services/replan_service.py`:
+- [x] Task 7: Re-plan service with in-process voice instruction queue (AC: 6)
+  - [x] ~~Add POST endpoint~~ — Pivoted: no HTTP endpoint needed; voice transcription flows through in-process `voice_instruction_service.py` queue (race condition avoidance, see Dev Notes)
+  - [x] Implement `wait_for_voice_instruction_and_replan(session_id, paused_step_index)` in `aria-backend/services/replan_service.py`:
     - Load task description from Firestore (`get_session(session_id).task_description`)
     - Build combined instruction: `f"Original task: {task_desc}\nUser correction at step {paused_step_index}: {instruction}"`
     - Call the Planner agent (same pattern as in `task_router.py` start endpoint) to produce a new step plan
     - Emit a new `plan_ready` SSE event with the revised step plan
     - Update Firestore status to `"executing"`
-    - Launch `asyncio.create_task(run_executor(session_id, new_step_plan))` to resume from current browser state
+    - Clear cancel flag via `reset_cancel_flag()` before resuming executor
+    - Reuse preserved PlaywrightComputer via `get_browser_instance()` to resume from current browser state
 
 - [x] Task 8: Emit `task_paused` payload with `reason: "barge_in"` in `aria-backend/services/executor_service.py` (AC: 3)
   - [x] In the `except BargeInException` block (the `else` branch, i.e. NOT `is_user_cancel()`), update the emitted `task_paused` payload from `{"paused_at_step": N}` to `{"paused_at_step": N, "reason": "barge_in"}`
@@ -541,6 +542,16 @@ Claude Sonnet 4.6 (GitHub Copilot)
 
 No blockers encountered. All implementation followed the Dev Notes specification exactly.
 
+**Code Review Fixes Applied (2026-03-03):**
+- **C1 (Critical):** Cancel flag was never cleared after barge-in — replan executor would instantly BargeInException. Fixed: `reset_cancel_flag(session_id)` called in `replan_service.py` before launching executor.
+- **C2 (Critical):** Browser destroyed in `finally` block before replan could resume. Fixed: `barge_in_active` flag skips `pc.stop()` on barge-in; browser stored via `set_browser_instance()` and reused via `get_browser_instance()` in replan.
+- **H1 (High):** Task 7 claimed a `/voice-instruction` endpoint that was never created (valid pivot, but task description was misleading). Fixed: Task 7 description updated to reflect actual in-process queue implementation.
+- **H2 (High):** Zero test coverage for `replan_service.py` and `voice_instruction_service.py`. Fixed: Added `test_voice_instruction_service.py` (8 tests) and `test_replan_service.py` (5 tests).
+- **H3 (High):** Race condition — voice instruction queue might not exist when transcription arrives. Fixed: Queue created in executor's barge-in handler (synchronous, before `asyncio.create_task`) instead of in replan service.
+- **M2 (Medium):** Misleading docstring in `relay_gemini_to_browser()` claiming "only when paused" but code was unconditional. Fixed: Updated docstring to accurately describe behavior.
+- **M3 (Medium):** Original task context lost during replan. Fixed: `context` now stored in Firestore session document at creation; `replan_service.py` reads and passes it to planner.
+- **L2 (Low):** `}}` merged on one line in `useSSEConsumer.ts`. Fixed: Separated to proper formatting.
+
 ### Completion Notes List
 
 - ✅ Task 1: Added `signal_barge_in()` to `session_service.py` — sets cancel flag only, no `is_user_cancel()` marker
@@ -557,7 +568,7 @@ No blockers encountered. All implementation followed the Dev Notes specification
 
 **Race condition note (from Dev Notes):** The `wait_for_voice_instruction_and_replan` task is launched from within `executor_service.py`'s barge-in handler (after `task_paused` is emitted), NOT from the `/barge-in` endpoint. This avoids the race where `get_paused_step()` wouldn't yet have the correct step index when the HTTP response returns.
 
-**Test counts:** Backend: 175 passed (5 new), Frontend: 178 passed (10 new from Story 4.4).
+**Test counts:** Backend: 188 passed (18 new), Frontend: 178 passed (10 new from Story 4.4).
 
 ### File List
 
@@ -565,12 +576,15 @@ No blockers encountered. All implementation followed the Dev Notes specification
 - `aria-backend/services/voice_instruction_service.py`
 - `aria-backend/services/replan_service.py`
 - `aria-backend/tests/test_barge_in_endpoint.py`
+- `aria-backend/tests/test_voice_instruction_service.py`
+- `aria-backend/tests/test_replan_service.py`
 
 **Backend modified files:**
 - `aria-backend/services/session_service.py`
 - `aria-backend/services/executor_service.py`
 - `aria-backend/handlers/voice_handler.py`
 - `aria-backend/routers/task_router.py`
+- `aria-backend/tests/test_executor_service.py`
 
 **Frontend new files:**
 - `aria-frontend/src/lib/constants.ts`

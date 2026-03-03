@@ -170,4 +170,5 @@ function handleSSEEvent(event: SSEEvent) {
       });
       break;
     }
-  }}
+  }
+}

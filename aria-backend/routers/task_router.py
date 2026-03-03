@@ -68,7 +68,7 @@ async def start_task(request: Request, body: StartTaskRequest):
 
     # 3. Create Firestore session document (status: "pending")
     try:
-        session_data = await create_session(uid, body.task_description)
+        session_data = await create_session(uid, body.task_description, context=body.context)
     except Exception:
         logger.exception("Firestore session creation failed for uid=%s", uid)
         return _error_response("INTERNAL_ERROR", "Session creation failed", 500)

@@ -10,10 +10,9 @@ After a voice barge-in, this service:
 import asyncio
 import logging
 
-from services.session_service import get_session, update_session_status
+from services.session_service import get_session, update_session_status, reset_cancel_flag, get_browser_instance
 from services.sse_service import emit_event
 from services.voice_instruction_service import (
-    create_voice_instruction_queue,
     get_instruction,
     release_voice_instruction_queue,
 )
@@ -32,7 +31,6 @@ async def wait_for_voice_instruction_and_replan(
     Called as asyncio.create_task() from executor_service.py after task_paused is emitted.
     The task runs concurrently — the browser state is preserved (no page reload).
     """
-    create_voice_instruction_queue(session_id)
     try:
         instruction = await get_instruction(session_id, timeout=60.0)
         if not instruction:
@@ -50,16 +48,20 @@ async def wait_for_voice_instruction_and_replan(
         # Load session to get original task description
         session = await get_session(session_id)
         task_desc = session.get("task_description", "")
+        original_context = session.get("context", "")
 
         combined = (
             f"Original task: {task_desc}\n"
             f"User interrupted at step {paused_at_step} with correction: {instruction}"
         )
 
-        # Invoke Planner with combined instruction
+        # Invoke Planner with combined instruction (preserve original context)
         from services.planner_service import run_planner  # deferred import
         try:
-            new_step_plan = await run_planner(task_description=combined)
+            new_step_plan = await run_planner(
+                task_description=combined,
+                context=original_context if original_context else None,
+            )
         except Exception:
             logger.exception("Planner failed during re-plan for session %s", session_id)
             emit_event(session_id, "task_failed", {"reason": "replan_planner_failed"})
@@ -85,9 +87,13 @@ async def wait_for_voice_instruction_and_replan(
         except Exception:
             logger.warning("Failed to update session %s status to 'executing'", session_id)
 
+        # Clear cancel flag before resuming (it stays set from barge-in signal)
+        reset_cancel_flag(session_id)
+
         # Resume executor from current browser state (no page reload, no session restart)
         from services.executor_service import run_executor  # deferred import
-        await run_executor(session_id, new_step_plan)
+        pc = get_browser_instance(session_id)
+        await run_executor(session_id, new_step_plan, existing_pc=pc)
 
     finally:
         release_voice_instruction_queue(session_id)
