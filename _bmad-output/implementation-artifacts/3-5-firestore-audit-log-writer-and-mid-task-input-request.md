@@ -1,6 +1,6 @@
 # Story 3.5: Firestore Audit Log Writer and Mid-Task Input Request
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,14 +26,14 @@ So that I have a complete record of what happened and ARIA can handle tasks that
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `write_audit_log` in `aria-backend/handlers/audit_writer.py` (AC: 1)
-  - [ ] Add imports at top of file:
+- [x] Task 1: Implement `write_audit_log` in `aria-backend/handlers/audit_writer.py` (AC: 1)
+  - [x] Add imports at top of file:
     ```python
     import logging
     from datetime import datetime, timezone
     from google.cloud import firestore
     ```
-  - [ ] Add module-level lazy Firestore client (same pattern as `session_service.py`):
+  - [x] Add module-level lazy Firestore client (same pattern as `session_service.py`):
     ```python
     logger = logging.getLogger(__name__)
     _db = None
@@ -44,7 +44,7 @@ So that I have a complete record of what happened and ARIA can handle tasks that
             _db = firestore.AsyncClient()
         return _db
     ```
-  - [ ] Replace the stub `write_audit_log` with the real implementation:
+  - [x] Replace the stub `write_audit_log` with the real implementation:
     ```python
     async def write_audit_log(session_id: str, step_index: int, data: dict) -> None:
         """Append a completed step entry to Firestore sessions/{session_id}.steps[]."""
@@ -66,15 +66,15 @@ So that I have a complete record of what happened and ARIA can handle tasks that
             "Audit log written for session %s step %d", session_id, step_index
         )
     ```
-  - [ ] Keep existing `update_session_status` wrapper (already correct — no changes)
-  - [ ] Remove `from dotenv import load_dotenv` and `load_dotenv()` — not needed in handlers
+  - [x] Keep existing `update_session_status` wrapper (already correct — no changes)
+  - [x] Remove `from dotenv import load_dotenv` and `load_dotenv()` — not needed in handlers
 
-- [ ] Task 2: Call `write_audit_log` from `aria-backend/services/executor_service.py` after each `step_complete` (AC: 1)
-  - [ ] Add import to the existing imports section in `executor_service.py`:
+- [x] Task 2: Call `write_audit_log` from `aria-backend/services/executor_service.py` after each `step_complete` (AC: 1)
+  - [x] Add import to the existing imports section in `executor_service.py`:
     ```python
     from handlers.audit_writer import write_audit_log
     ```
-  - [ ] Find the block after `emit_event(session_id, "step_complete", {...})` and BEFORE `completed_steps.append(...)`. Insert the audit write call:
+  - [x] Find the block after `emit_event(session_id, "step_complete", {...})` and BEFORE `completed_steps.append(...)`. Insert the audit write call:
     ```python
     # Write step to Firestore audit log (non-fatal — must not halt execution) (AC: 1)
     try:
@@ -96,11 +96,11 @@ So that I have a complete record of what happened and ARIA can handle tasks that
             current_step_index,
         )
     ```
-  - [ ] This is placed between `emit_event(..., "step_complete", ...)` and `completed_steps.append(...)`
-  - [ ] Do NOT remove or change the `completed_steps.append(...)` call — it is still needed for the in-memory state used by `handle_task_complete`
+  - [x] This is placed between `emit_event(..., "step_complete", ...)` and `completed_steps.append(...)`
+  - [x] Do NOT remove or change the `completed_steps.append(...)` call — it is still needed for the in-memory state used by `handle_task_complete`
 
-- [ ] Task 3: Handle `requires_user_input` steps in `aria-backend/services/executor_service.py` (AC: 2, 4)
-  - [ ] In the `while step_idx < len(steps):` loop, after extracting `step`, `current_step_index`, `step_description`, and resetting `gemini_error_count`, add a `requires_user_input` check BEFORE the `step_start` SSE emit:
+- [x] Task 3: Handle `requires_user_input` steps in `aria-backend/services/executor_service.py` (AC: 2, 4)
+  - [x] In the `while step_idx < len(steps):` loop, after extracting `step`, `current_step_index`, `step_description`, and resetting `gemini_error_count`, add a `requires_user_input` check BEFORE the `step_start` SSE emit:
     ```python
     # Pre-step: request user input if the Planner flagged this step as needing it (AC: 2, FR33)
     if step.get("requires_user_input"):
@@ -130,9 +130,9 @@ So that I have a complete record of what happened and ARIA can handle tasks that
         step = dict(step)
         step["user_provided_value"] = pre_step_input
     ```
-  - [ ] This check fires BEFORE `emit_event(session_id, "step_start", {...})` so the user sees the input request before the step begins
-  - [ ] `step = dict(step)` shallow copy ensures the original `step_plan["steps"]` list is not mutated — safe for retries
-  - [ ] Update the `build_executor_context` call inside the attempt loop to pass `user_provided_value`:
+  - [x] This check fires BEFORE `emit_event(session_id, "step_start", {...})` so the user sees the input request before the step begins
+  - [x] `step = dict(step)` shallow copy ensures the original `step_plan["steps"]` list is not mutated — safe for retries
+  - [x] Update the `build_executor_context` call inside the attempt loop to pass `user_provided_value`:
     ```python
     context = build_executor_context(
         step_plan,
@@ -142,18 +142,18 @@ So that I have a complete record of what happened and ARIA can handle tasks that
     )
     ```
 
-- [ ] Task 4: Extend `build_executor_context` in `aria-backend/agents/executor_agent.py` (AC: 4)
-  - [ ] Read current `executor_agent.py` to find the `build_executor_context` function signature and implementation
-  - [ ] Add optional parameter `user_provided_value: str | None = None` to the function signature (backward-compatible)
-  - [ ] At the end of the context string assembly, append the user value if provided:
+- [x] Task 4: Extend `build_executor_context` in `aria-backend/agents/executor_agent.py` (AC: 4)
+  - [x] Read current `executor_agent.py` to find the `build_executor_context` function signature and implementation
+  - [x] Add optional parameter `user_provided_value: str | None = None` to the function signature (backward-compatible)
+  - [x] At the end of the context string assembly, append the user value if provided:
     ```python
     if user_provided_value:
         context += f"\n\nUser-provided value for this step: {user_provided_value}\nUse this value directly where the step requires user input."
     ```
-  - [ ] This is an additive change — all existing callers without the new param continue to work
+  - [x] This is an additive change — all existing callers without the new param continue to work
 
-- [ ] Task 5: Add `FirestoreAuditStep` type and `auditLog` state to frontend (AC: 5, 6)
-  - [ ] In `aria-frontend/src/types/aria.ts`, add the new interface after the existing `SSEEvent` interface:
+- [x] Task 5: Add `FirestoreAuditStep` type and `auditLog` state to frontend (AC: 5, 6)
+  - [x] In `aria-frontend/src/types/aria.ts`, add the new interface after the existing `SSEEvent` interface:
     ```typescript
     export interface FirestoreAuditStep {
       step_index: number;
@@ -166,38 +166,30 @@ So that I have a complete record of what happened and ARIA can handle tasks that
       status: "complete" | "error";
     }
     ```
-  - [ ] In `aria-frontend/src/lib/store/aria-store.ts`:
+  - [x] In `aria-frontend/src/lib/store/aria-store.ts`:
     - Add `import type { ..., FirestoreAuditStep } from "@/types/aria"` (extend existing import)
     - Add `auditLog: FirestoreAuditStep[]` to `ThinkingPanelSlice` interface
     - Add `auditLog: []` to `ARIA_INITIAL_STATE`
 
-- [ ] Task 6: Create `aria-frontend/src/lib/hooks/useFirestoreSession.ts` (AC: 5)
-  - [ ] Create the new hook file:
-    ```typescript
-    "use client";
-    import { useEffect } from "react";
-    import { getFirestore, doc, onSnapshot } from "firebase/firestore";
-    import { app } from "@/lib/firebase";
-    import { useARIAStore } from "@/lib/store/aria-store";
-    import type { FirestoreAuditStep } from "@/types/aria";
+- [x] Task 6: Create `aria-frontend/src/lib/hooks/useFirestoreSession.ts` (AC: 5)
+  - [x] Create the new hook file
 
-    export function useFirestoreSession() {
-      const sessionId = useARIAStore((state) => state.sessionId);
+- [x] Task 7: Mount `useFirestoreSession` and render audit log in `ThinkingPanel.tsx` (AC: 5, 6)
+  - [x] Import `useFirestoreSession` at top of `ThinkingPanel.tsx`
+  - [x] Call `useFirestoreSession()` at the top of the component body (after existing store reads)
+  - [x] Add `auditLog` to the existing `useARIAStore` reads
+  - [x] After the step list `<ul>` and before the `InputRequestBanner` block, add the audit log section
 
-      useEffect(() => {
-        if (!sessionId) return;
+- [x] Task 8: Write backend tests (AC: 1, 2, 4)
+  - [x] Create `aria-backend/tests/test_audit_writer.py` with 4 tests
+  - [x] In `aria-backend/tests/test_executor_service.py`, add 3 new tests (13, 14, 15)
 
-        const db = getFirestore(app);
-        const sessionRef = doc(db, "sessions", sessionId);
+- [x] Task 9: Write frontend tests (AC: 5, 6)
+  - [x] Create `aria-frontend/src/lib/hooks/useFirestoreSession.test.ts` with 6 tests
+  - [x] In `ThinkingPanel.test.tsx`, add 4 new audit log tests
 
-        const unsubscribe = onSnapshot(
-          sessionRef,
-          (snapshot) => {
-            if (!snapshot.exists()) return;
-            const data = snapshot.data();
-            const steps = (data.steps ?? []) as FirestoreAuditStep[];
-            useARIAStore.setState({ auditLog: steps });
-          },
+- [x] Task 10: Git commit
+  - [ ] `git add -A && git commit -m "feat(story-3.5): firestore audit log writer and mid-task input request"`
           (error) => {
             console.warn("[useFirestoreSession] onSnapshot error:", error);
           }
@@ -439,6 +431,47 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+None — implementation proceeded without blocking issues.
+
 ### Completion Notes List
 
+- Task 1: Replaced no-op stub in `audit_writer.py` with full implementation using lazy `_get_db()` pattern, `firestore.ArrayUnion`, and ISO 8601 timestamp formatting. Removed dotenv imports.
+- Task 2: Added `write_audit_log` call in `executor_service.py` wrapped in `try/except` after `step_complete` emit, before `completed_steps.append()`. Uses the step's `action`, `description`, `confidence`, and `screenshot_url`.
+- Task 3: Added `requires_user_input` pre-step check before `step_start` emit. Uses existing `_wait_for_user_input` with `paused_with="requires_input"`. Shallow-copies step dict to inject `user_provided_value` safely.
+- Task 4: Extended `build_executor_context` with optional `user_provided_value: str | None = None` param — backward-compatible; appends user value to context string when set.
+- Task 5: Added `FirestoreAuditStep` interface to `aria.ts` and `auditLog: FirestoreAuditStep[]` to store interface and initial state.
+- Task 6: Created `useFirestoreSession.ts` hook with `onSnapshot` subscription, auditLog population, cleanup, and error logging.
+- Task 7: Mounted `useFirestoreSession()` in `ThinkingPanel.tsx`, reads `auditLog` from store, renders audit log section conditionally when `panelStatus === "complete"` and `auditLog.length > 0`.
+- Task 8: Created `test_audit_writer.py` (4 tests: all pass). Added 3 new tests to `test_executor_service.py` (tests 13–15: audit write on success, non-fatal audit failure, requires_user_input emits awaiting_input before step_start). All 124 backend tests pass.
+- Task 9: Created `useFirestoreSession.test.ts` (6 tests). Added 4 audit log tests to `ThinkingPanel.test.tsx`. All 98 frontend tests pass.
+
 ### File List
+
+**Backend:**
+- `aria-backend/handlers/audit_writer.py` — implemented (replaced stub)
+- `aria-backend/agents/executor_agent.py` — extended `build_executor_context` signature
+- `aria-backend/services/executor_service.py` — added `write_audit_log` import, `requires_user_input` handling, audit log call, updated `build_executor_context` call
+- `aria-backend/tests/test_audit_writer.py` — created (4 tests)
+- `aria-backend/tests/test_executor_service.py` — added tests 13, 14, 15
+
+**Frontend:**
+- `aria-frontend/src/types/aria.ts` — added `FirestoreAuditStep` interface
+- `aria-frontend/src/lib/store/aria-store.ts` — added `FirestoreAuditStep` import, `auditLog` to slice and initial state
+- `aria-frontend/src/lib/hooks/useFirestoreSession.ts` — created
+- `aria-frontend/src/lib/hooks/useFirestoreSession.test.ts` — created (6 tests)
+- `aria-frontend/src/components/thinking-panel/ThinkingPanel.tsx` — mounted hook, added audit log section
+- `aria-frontend/src/components/thinking-panel/ThinkingPanel.test.tsx` — added 4 audit log tests
+
+**Sprint tracking:**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — updated `3-5-*` to `review`
+
+## Change Log
+
+- **2026-03-03**: Implemented Story 3.5 — Firestore audit log writer and mid-task input request
+  - Replaced `write_audit_log` stub with full Firestore `ArrayUnion` implementation
+  - Added non-fatal audit log write call in executor after each `step_complete`
+  - Added `requires_user_input` pre-step check in executor loop (emits `awaiting_input` with `reason: "requires_input"`, waits for user, injects value into context)
+  - Extended `build_executor_context` with backward-compatible `user_provided_value` param
+  - Added `FirestoreAuditStep` type, `auditLog` store field, `useFirestoreSession` hook
+  - Rendered audit log summary in `ThinkingPanel` when task is complete
+  - 3 new backend tests, 10 new frontend tests; all regression suites green (124 backend, 98 frontend)

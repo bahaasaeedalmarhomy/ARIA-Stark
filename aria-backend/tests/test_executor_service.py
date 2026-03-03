@@ -813,3 +813,213 @@ async def test_run_executor_captcha_detected_emits_awaiting_input_then_retries()
 
     # handle_task_complete called (full success)
     mock_htc.assert_called_once()
+
+
+# ─────────────────────────────── Test 13 (Story 3.5) ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_run_executor_writes_audit_log_on_step_complete():
+    """
+    After a successful step, write_audit_log is called once with the correct
+    session_id, step_index, and data dict (AC: 1 of story 3.5).
+    """
+    mock_adk_session = _make_mock_adk_session()
+    expected_url = "https://storage.googleapis.com/bucket/sessions/sess/steps/0000.png"
+
+    with (
+        patch("services.executor_service.PlaywrightComputer") as MockPC,
+        patch("services.executor_service.LlmAgent"),
+        patch("services.executor_service.ComputerUseToolset"),
+        patch("services.executor_service.InMemorySessionService") as MockSessionSvc,
+        patch("services.executor_service.Runner") as MockRunner,
+        patch("services.executor_service.emit_event"),
+        patch("services.executor_service.build_executor_context", return_value="ctx"),
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock),
+        patch("services.executor_service.upload_screenshot", new_callable=AsyncMock, return_value=expected_url),
+        patch("services.executor_service.write_audit_log", new_callable=AsyncMock) as mock_audit,
+    ):
+        mock_pc = AsyncMock()
+        mock_pc.screenshot = AsyncMock(return_value=b"\x89PNG")
+        mock_pc.detect_captcha = AsyncMock(return_value=False)
+        MockPC.return_value = mock_pc
+
+        mock_svc = AsyncMock()
+        mock_svc.create_session = AsyncMock(return_value=mock_adk_session)
+        MockSessionSvc.return_value = mock_svc
+
+        async def _no_events(**kwargs):
+            return
+            yield
+
+        mock_runner = MagicMock()
+        mock_runner.run_async = MagicMock(side_effect=lambda **kw: _no_events(**kw))
+        MockRunner.return_value = mock_runner
+
+        plan = {"task_summary": "t", "steps": [_SAMPLE_STEP_PLAN["steps"][0]]}
+
+        from services.executor_service import run_executor
+        await run_executor(_SESSION_ID, plan)
+
+    mock_audit.assert_called_once()
+    call_args = mock_audit.call_args
+    assert call_args.args[0] == _SESSION_ID, "session_id mismatch"
+    assert call_args.args[1] == 0, "step_index mismatch"
+    data = call_args.args[2]
+    assert "action_type" in data, f"Missing action_type in audit data: {data}"
+    assert "description" in data, f"Missing description in audit data: {data}"
+    assert "confidence" in data, f"Missing confidence in audit data: {data}"
+    assert "screenshot_url" in data, f"Missing screenshot_url in audit data: {data}"
+    assert data["screenshot_url"] == expected_url
+
+
+# ─────────────────────────────── Test 14 (Story 3.5) ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_run_executor_audit_write_failure_does_not_halt_execution():
+    """
+    When write_audit_log raises an exception, execution must continue:
+    step_complete SSE is still emitted and handle_task_complete is called (AC: 1).
+    """
+    mock_adk_session = _make_mock_adk_session()
+
+    with (
+        patch("services.executor_service.PlaywrightComputer") as MockPC,
+        patch("services.executor_service.LlmAgent"),
+        patch("services.executor_service.ComputerUseToolset"),
+        patch("services.executor_service.InMemorySessionService") as MockSessionSvc,
+        patch("services.executor_service.Runner") as MockRunner,
+        patch("services.executor_service.emit_event") as mock_emit,
+        patch("services.executor_service.build_executor_context", return_value="ctx"),
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock) as mock_htc,
+        patch("services.executor_service.upload_screenshot", new_callable=AsyncMock, return_value=""),
+        patch(
+            "services.executor_service.write_audit_log",
+            new_callable=AsyncMock,
+            side_effect=Exception("Firestore unavailable"),
+        ),
+    ):
+        mock_pc = AsyncMock()
+        mock_pc.screenshot = AsyncMock(return_value=b"\x89PNG")
+        mock_pc.detect_captcha = AsyncMock(return_value=False)
+        MockPC.return_value = mock_pc
+
+        mock_svc = AsyncMock()
+        mock_svc.create_session = AsyncMock(return_value=mock_adk_session)
+        MockSessionSvc.return_value = mock_svc
+
+        async def _no_events(**kwargs):
+            return
+            yield
+
+        mock_runner = MagicMock()
+        mock_runner.run_async = MagicMock(side_effect=lambda **kw: _no_events(**kw))
+        MockRunner.return_value = mock_runner
+
+        plan = {"task_summary": "t", "steps": [_SAMPLE_STEP_PLAN["steps"][0]]}
+
+        from services.executor_service import run_executor
+        await run_executor(_SESSION_ID, plan)
+
+    # step_complete must still be emitted despite audit log failure
+    emit_types = [c.args[1] for c in mock_emit.call_args_list]
+    assert "step_complete" in emit_types, f"Expected step_complete in {emit_types}"
+
+    # handle_task_complete must still be called
+    mock_htc.assert_called_once()
+
+
+# ─────────────────────────────── Test 15 (Story 3.5) ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_run_executor_requires_user_input_emits_awaiting_input_before_step_start():
+    """
+    When a step has requires_user_input=True, 'awaiting_input' SSE with
+    reason='requires_input' is emitted BEFORE any 'step_start' event (AC: 2).
+    The user-provided value is injected into build_executor_context (AC: 4).
+    """
+    mock_adk_session = _make_mock_adk_session()
+
+    step_with_input = {
+        "step_index": 0,
+        "description": "Enter email address",
+        "action": "type",
+        "target": "#email",
+        "value": "",
+        "confidence": 0.9,
+        "is_destructive": False,
+        "requires_user_input": True,
+        "user_input_reason": "What is the account email?",
+    }
+
+    with (
+        patch("services.executor_service.PlaywrightComputer") as MockPC,
+        patch("services.executor_service.LlmAgent"),
+        patch("services.executor_service.ComputerUseToolset"),
+        patch("services.executor_service.InMemorySessionService") as MockSessionSvc,
+        patch("services.executor_service.Runner") as MockRunner,
+        patch("services.executor_service.emit_event") as mock_emit,
+        patch("services.executor_service.build_executor_context", return_value="ctx") as mock_bec,
+        patch("services.executor_service.handle_task_complete", new_callable=AsyncMock),
+        patch("services.executor_service.upload_screenshot", new_callable=AsyncMock, return_value=""),
+        patch(
+            "services.executor_service._wait_for_user_input",
+            new_callable=AsyncMock,
+            return_value="test@example.com",
+        ) as mock_wait,
+        patch("services.executor_service.write_audit_log", new_callable=AsyncMock),
+    ):
+        mock_pc = AsyncMock()
+        mock_pc.screenshot = AsyncMock(return_value=b"\x89PNG")
+        mock_pc.detect_captcha = AsyncMock(return_value=False)
+        MockPC.return_value = mock_pc
+
+        mock_svc = AsyncMock()
+        mock_svc.create_session = AsyncMock(return_value=mock_adk_session)
+        MockSessionSvc.return_value = mock_svc
+
+        async def _no_events(**kwargs):
+            return
+            yield
+
+        mock_runner = MagicMock()
+        mock_runner.run_async = MagicMock(side_effect=lambda **kw: _no_events(**kw))
+        MockRunner.return_value = mock_runner
+
+        plan = {"task_summary": "t", "steps": [step_with_input]}
+
+        from services.executor_service import run_executor
+        await run_executor(_SESSION_ID, plan)
+
+    emit_types = [c.args[1] for c in mock_emit.call_args_list]
+
+    # awaiting_input with reason=requires_input MUST appear
+    assert "awaiting_input" in emit_types, f"Expected 'awaiting_input' in {emit_types}"
+    awaiting_call = next(c for c in mock_emit.call_args_list if c.args[1] == "awaiting_input")
+    awaiting_payload = awaiting_call.args[2]
+    assert awaiting_payload.get("reason") == "requires_input", (
+        f"Expected reason='requires_input', got {awaiting_payload}"
+    )
+    assert awaiting_payload.get("message") == "What is the account email?"
+
+    # awaiting_input MUST come before step_start
+    awaiting_idx = emit_types.index("awaiting_input")
+    step_start_idx = emit_types.index("step_start")
+    assert awaiting_idx < step_start_idx, (
+        f"awaiting_input (idx={awaiting_idx}) must come before step_start (idx={step_start_idx})"
+    )
+
+    # _wait_for_user_input called with paused_with="requires_input"
+    mock_wait.assert_called_once()
+    call_kwargs = mock_wait.call_args.kwargs
+    assert call_kwargs.get("paused_with") == "requires_input", (
+        f"Expected paused_with='requires_input', got {call_kwargs}"
+    )
+
+    # build_executor_context called with user_provided_value="test@example.com"
+    bec_calls = mock_bec.call_args_list
+    assert len(bec_calls) >= 1, "build_executor_context must have been called"
+    last_bec_call = bec_calls[-1]
+    user_val = last_bec_call.kwargs.get("user_provided_value")
+    assert user_val == "test@example.com", (
+        f"Expected user_provided_value='test@example.com', got {user_val!r}"
+    )

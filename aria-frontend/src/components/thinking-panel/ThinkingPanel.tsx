@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StepItem } from "./StepItem";
 import { InputRequestBanner } from "./InputRequestBanner";
 import { useARIAStore } from "@/lib/store/aria-store";
+import { useFirestoreSession } from "@/lib/hooks/useFirestoreSession";
 
 export function ThinkingPanel() {
   const steps = useARIAStore((state) => state.steps);
@@ -13,8 +14,11 @@ export function ThinkingPanel() {
   const taskStatus = useARIAStore((state) => state.taskStatus);
   const awaitingInputMessage = useARIAStore((state) => state.awaitingInputMessage);
   const sessionId = useARIAStore((state) => state.sessionId);
+  const auditLog = useARIAStore((state) => state.auditLog);
   const viewportRef = useRef<HTMLDivElement>(null);
   const prevActiveIndexRef = useRef<number | null>(null);
+
+  useFirestoreSession();
 
   useEffect(() => {
     const activeStep = steps.find((s) => s.status === "active");
@@ -98,6 +102,28 @@ export function ThinkingPanel() {
                 </li>
               ))}
             </ul>
+          )}          {panelStatus === "complete" && auditLog.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-border-aria" data-testid="audit-log-section">
+              <p className="text-xs text-text-secondary mb-2 font-medium">
+                Audit Log — {auditLog.length} step{auditLog.length !== 1 ? "s" : ""} recorded
+              </p>
+              <ul className="flex flex-col gap-1" role="list" aria-label="Audit log">
+                {auditLog.map((entry) => (
+                  <li
+                    key={entry.step_index}
+                    className="text-xs font-mono text-text-secondary flex items-start gap-2"
+                  >
+                    <span className="text-text-primary shrink-0">
+                      #{entry.step_index + 1}
+                    </span>
+                    <span className="flex-1">{entry.description}</span>
+                    {entry.screenshot_url && (
+                      <span className="text-blue-400 shrink-0">[screenshot]</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}          {taskStatus === "awaiting_input" && awaitingInputMessage && sessionId && (
             <InputRequestBanner
               message={awaitingInputMessage}

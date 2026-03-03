@@ -33,6 +33,7 @@ def build_executor_context(
     step_plan: dict,
     completed_steps: list[dict],
     current_screenshot_b64: str,
+    user_provided_value: str | None = None,
 ) -> str:
     """
     Assemble the Executor context string for injection into the ADK runner user turn.
@@ -77,4 +78,10 @@ def build_executor_context(
         "## Current Screenshot",
         f"data:image/png;base64,{current_screenshot_b64}",
     ]
-    return "\n".join(context_parts)
+    context = "\n".join(context_parts)
+    if user_provided_value:
+        context += (
+            f"\n\nUser-provided value for this step: {user_provided_value}\n"
+            "Use this value directly where the step requires user input."
+        )
+    return context

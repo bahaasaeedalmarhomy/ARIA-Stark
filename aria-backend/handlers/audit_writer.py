@@ -1,12 +1,38 @@
-import os
-from dotenv import load_dotenv
+import logging
+from datetime import datetime, timezone
 
-load_dotenv()
+from google.cloud import firestore
 
-# Stub: Firestore audit log writer will be implemented in Story 3.5
+logger = logging.getLogger(__name__)
+_db = None
+
+
+def _get_db() -> firestore.AsyncClient:
+    global _db
+    if _db is None:
+        _db = firestore.AsyncClient()
+    return _db
+
+
 async def write_audit_log(session_id: str, step_index: int, data: dict) -> None:
-    """Write an audit log entry to Firestore. Stub implementation."""
-    pass
+    """Append a completed step entry to Firestore sessions/{session_id}.steps[]."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    entry = {
+        "step_index": step_index,
+        "action_type": data.get("action_type"),
+        "description": data.get("description", ""),
+        "result": data.get("result", "done"),
+        "screenshot_url": data.get("screenshot_url"),
+        "confidence": data.get("confidence", 1.0),
+        "timestamp": timestamp,
+        "status": "complete",
+    }
+    db = _get_db()
+    doc_ref = db.collection("sessions").document(session_id)
+    await doc_ref.update({"steps": firestore.ArrayUnion([entry])})
+    logger.debug(
+        "Audit log written for session %s step %d", session_id, step_index
+    )
 
 
 async def update_session_status(session_id: str, status: str) -> None:

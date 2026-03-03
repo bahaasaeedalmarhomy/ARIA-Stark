@@ -5,6 +5,7 @@ import type {
   PlanStep,
   ThinkingPanelStatus,
   SSEConnectionStatus,
+  FirestoreAuditStep,
 } from "@/types/aria";
 
 interface SessionSlice {
@@ -35,6 +36,7 @@ interface ThinkingPanelSlice {
   errorMessage: string | null;
   awaitingInputMessage: string | null;
   connectionStatus: SSEConnectionStatus;
+  auditLog: FirestoreAuditStep[];
 }
 
 type ARIAStore = SessionSlice & VoiceSlice & ThinkingPanelSlice;
@@ -58,6 +60,7 @@ export const ARIA_INITIAL_STATE = {
   errorMessage: null,
   awaitingInputMessage: null,
   connectionStatus: "disconnected" as SSEConnectionStatus,
+  auditLog: [],
 };
 
 export const resetAllSlices = () => ARIA_INITIAL_STATE;

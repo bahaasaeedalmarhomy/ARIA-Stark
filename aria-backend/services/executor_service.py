@@ -24,6 +24,7 @@ from google.genai import types as genai_types
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from agents.executor_agent import build_executor_context
+from handlers.audit_writer import write_audit_log
 from prompts.executor_system import EXECUTOR_SYSTEM_PROMPT
 from services.gcs_service import upload_screenshot
 from services.input_queue_service import clear_input_queue, get_input_queue
@@ -148,6 +149,34 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
             step_description = step.get("description", f"step {current_step_index}")
             gemini_error_count = 0
 
+            # Pre-step: request user input if the Planner flagged this step as needing it (AC: 2, FR33)
+            if step.get("requires_user_input"):
+                user_input_reason = (
+                    step.get("user_input_reason")
+                    or f"I need your input to complete step {current_step_index + 1}"
+                )
+                emit_event(
+                    session_id,
+                    "awaiting_input",
+                    {
+                        "step_index": current_step_index,
+                        "reason": "requires_input",
+                        "message": user_input_reason,
+                    },
+                    step_index=current_step_index,
+                )
+                pre_step_input = await _wait_for_user_input(
+                    session_id,
+                    current_step_index,
+                    paused_with="requires_input",
+                    step_description=step_description,
+                )
+                if pre_step_input is None:
+                    return  # timeout already emitted task_failed
+                # Shallow-copy step dict (do NOT mutate shared step_plan) and inject user value
+                step = dict(step)
+                step["user_provided_value"] = pre_step_input
+
             # Emit step_start BEFORE retry loop (AC: 1, 5)
             emit_event(
                 session_id,
@@ -180,6 +209,7 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                             step_plan,
                             completed_steps,
                             screenshot_b64,
+                            user_provided_value=step.get("user_provided_value"),
                         )
 
                         async for _event in runner.run_async(
@@ -402,6 +432,25 @@ async def run_executor(session_id: str, step_plan: dict) -> None:
                     },
                     step_index=current_step_index,
                 )
+                # Write step to Firestore audit log (non-fatal — must not halt execution) (AC: 1)
+                try:
+                    await write_audit_log(
+                        session_id,
+                        current_step_index,
+                        {
+                            "action_type": step.get("action"),
+                            "description": step_description,
+                            "result": "done",
+                            "screenshot_url": screenshot_url or None,
+                            "confidence": step.get("confidence", 1.0),
+                        },
+                    )
+                except Exception:
+                    logger.warning(
+                        "Audit log write failed for session %s step %d — continuing",
+                        session_id,
+                        current_step_index,
+                    )
                 completed_steps.append(
                     {
                         "step_index": current_step_index,

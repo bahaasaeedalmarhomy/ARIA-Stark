@@ -2,14 +2,34 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ThinkingPanel } from "./ThinkingPanel";
 
+vi.mock("@/lib/hooks/useFirestoreSession", () => ({
+  useFirestoreSession: vi.fn(),
+}));
+
 vi.mock("@/lib/store/aria-store", () => ({
   useARIAStore: vi.fn(),
 }));
 import { useARIAStore } from "@/lib/store/aria-store";
 
-function setStore(state: { steps: unknown[]; panelStatus: string; taskSummary?: string }) {
+function setStore(state: {
+  steps: unknown[];
+  panelStatus: string;
+  taskSummary?: string;
+  taskStatus?: string;
+  awaitingInputMessage?: string | null;
+  sessionId?: string | null;
+  auditLog?: unknown[];
+}) {
+  const defaults = {
+    taskStatus: "idle",
+    awaitingInputMessage: null,
+    sessionId: null,
+    auditLog: [],
+    taskSummary: "",
+    ...state,
+  };
   (useARIAStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-    (selector: (state: unknown) => unknown) => selector(state)
+    (selector: (state: unknown) => unknown) => selector(defaults)
   );
 }
 
@@ -117,5 +137,80 @@ describe("ThinkingPanel", () => {
     setStore({ steps: [], panelStatus: "idle", taskSummary: "" });
     render(<ThinkingPanel />);
     expect(screen.queryByText(/Task understood:/i)).toBeNull();
+  });
+
+  it("renders audit log section when panelStatus=complete and auditLog is non-empty", () => {
+    setStore({
+      steps: [],
+      panelStatus: "complete",
+      auditLog: [
+        {
+          step_index: 0,
+          description: "Navigate to site",
+          action_type: "navigate",
+          result: "done",
+          screenshot_url: "https://storage.googleapis.com/bucket/step0.png",
+          confidence: 0.9,
+          timestamp: "2026-03-03T14:22:33.456Z",
+          status: "complete",
+        },
+      ],
+    });
+    render(<ThinkingPanel />);
+
+    const section = screen.getByTestId("audit-log-section");
+    expect(section).toBeTruthy();
+    expect(screen.getByText(/1 step recorded/i)).toBeTruthy();
+    expect(screen.getByText("Navigate to site")).toBeTruthy();
+    expect(screen.getByText("[screenshot]")).toBeTruthy();
+  });
+
+  it("does not render audit log section when panelStatus is not complete", () => {
+    setStore({
+      steps: [],
+      panelStatus: "executing",
+      auditLog: [
+        {
+          step_index: 0,
+          description: "Navigate",
+          action_type: "navigate",
+          result: "done",
+          screenshot_url: null,
+          confidence: 0.9,
+          timestamp: "2026-03-03T14:22:33.456Z",
+          status: "complete",
+        },
+      ],
+    });
+    render(<ThinkingPanel />);
+    expect(screen.queryByTestId("audit-log-section")).toBeNull();
+  });
+
+  it("does not render audit log section when auditLog is empty", () => {
+    setStore({ steps: [], panelStatus: "complete", auditLog: [] });
+    render(<ThinkingPanel />);
+    expect(screen.queryByTestId("audit-log-section")).toBeNull();
+  });
+
+  it("does not render [screenshot] badge when screenshot_url is null", () => {
+    setStore({
+      steps: [],
+      panelStatus: "complete",
+      auditLog: [
+        {
+          step_index: 0,
+          description: "Click button",
+          action_type: "click",
+          result: "done",
+          screenshot_url: null,
+          confidence: 0.8,
+          timestamp: "2026-03-03T14:22:33.456Z",
+          status: "complete",
+        },
+      ],
+    });
+    render(<ThinkingPanel />);
+    expect(screen.getByTestId("audit-log-section")).toBeTruthy();
+    expect(screen.queryByText("[screenshot]")).toBeNull();
   });
 });
