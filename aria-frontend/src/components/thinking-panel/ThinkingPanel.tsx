@@ -102,7 +102,8 @@ export function ThinkingPanel() {
                 </li>
               ))}
             </ul>
-          )}          {panelStatus === "complete" && auditLog.length > 0 && (
+          )}
+          {panelStatus === "complete" && auditLog.length > 0 && (
             <div className="mt-4 pt-3 border-t border-border-aria" data-testid="audit-log-section">
               <p className="text-xs text-text-secondary mb-2 font-medium">
                 Audit Log — {auditLog.length} step{auditLog.length !== 1 ? "s" : ""} recorded
@@ -124,7 +125,8 @@ export function ThinkingPanel() {
                 ))}
               </ul>
             </div>
-          )}          {taskStatus === "awaiting_input" && awaitingInputMessage && sessionId && (
+          )}
+          {taskStatus === "awaiting_input" && awaitingInputMessage && sessionId && (
             <InputRequestBanner
               message={awaitingInputMessage}
               sessionId={sessionId}
@@ -135,7 +137,8 @@ export function ThinkingPanel() {
                 })
               }
             />
-          )}        </ScrollArea>
+          )}
+        </ScrollArea>
       </div>
     </div>
   );

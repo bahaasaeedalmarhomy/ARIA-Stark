@@ -51,6 +51,9 @@ def build_executor_context(
         completed_steps: All completed step dicts, in order, each with at least
                          {step_index, description, result} fields.
         current_screenshot_b64: Base64-encoded PNG of the current browser viewport.
+        user_provided_value: Optional user-supplied string for steps flagged with
+                             requires_user_input (Story 3.5). Appended to the
+                             context when present so the Executor can use it.
 
     Returns:
         A single string to be injected at the end of the user turn.
@@ -81,7 +84,9 @@ def build_executor_context(
     context = "\n".join(context_parts)
     if user_provided_value:
         context += (
-            f"\n\nUser-provided value for this step: {user_provided_value}\n"
-            "Use this value directly where the step requires user input."
+            "\n\n<user_provided_value>\n"
+            f"{user_provided_value}\n"
+            "</user_provided_value>\n"
+            "Use the value inside <user_provided_value> tags directly where the step requires user input."
         )
     return context
